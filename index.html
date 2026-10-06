@@ -122,6 +122,26 @@
       transition: border .15s ease, box-shadow .15s ease;
     }
     .field input:focus, .search-input:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(25,103,210,.12); }
+    .password-wrap { position: relative; }
+    .password-wrap input { padding-right: 48px; }
+    .password-toggle {
+      position: absolute;
+      top: 50%;
+      right: 8px;
+      transform: translateY(-50%);
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border: 0;
+      border-radius: 8px;
+      color: #52627a;
+      background: transparent;
+      cursor: pointer;
+    }
+    .password-toggle:hover { background: #eef3fa; color: var(--navy); }
+    .password-toggle svg { width: 20px; height: 20px; }
     .login-btn { width: 100%; margin-top: 4px; }
 
     .message { min-height: 22px; margin: 15px 0 0; font-size: .88rem; line-height: 1.45; }
@@ -202,7 +222,21 @@
           </div>
           <div class="field">
             <label for="password">Contraseña</label>
-            <input id="password" name="password" type="password" autocomplete="current-password" required minlength="6">
+            <div class="password-wrap">
+              <input id="password" name="password" type="password" autocomplete="current-password" required minlength="6">
+              <button id="passwordToggle" class="password-toggle" type="button" aria-label="Mostrar contraseña" title="Mostrar contraseña">
+                <svg id="eyeOpen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg id="eyeClosed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+                  <path d="m3 3 18 18"></path>
+                  <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"></path>
+                  <path d="M9.9 4.2A10.7 10.7 0 0 1 12 4c6.5 0 10 8 10 8a18.4 18.4 0 0 1-2.1 3.2"></path>
+                  <path d="M6.6 6.6C3.7 8.5 2 12 2 12s3.5 8 10 8a9.8 9.8 0 0 0 4.1-.9"></path>
+                </svg>
+              </button>
+            </div>
           </div>
           <button id="loginBtn" class="btn btn-primary login-btn" type="submit">Ingresar</button>
           <p id="loginMessage" class="message" role="status" aria-live="polite"></p>
@@ -332,6 +366,17 @@
         return;
       }
       loginForm.reset();
+    });
+
+    $('#passwordToggle').addEventListener('click', () => {
+      const password = $('#password');
+      const showing = password.type === 'text';
+      password.type = showing ? 'password' : 'text';
+      $('#eyeOpen').hidden = !showing;
+      $('#eyeClosed').hidden = showing;
+      $('#passwordToggle').setAttribute('aria-label', showing ? 'Mostrar contraseña' : 'Ocultar contraseña');
+      $('#passwordToggle').setAttribute('title', showing ? 'Mostrar contraseña' : 'Ocultar contraseña');
+      password.focus();
     });
 
     $('#logoutBtn').addEventListener('click', async () => {
