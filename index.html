@@ -159,7 +159,21 @@
     .search-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; }
     .search-help { margin: 11px 0 0; color: var(--muted); font-size: .84rem; }
 
-    .results-summary { margin: 25px 0 12px; color: var(--muted); font-size: .9rem; }
+    .results-tools { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:25px 0 12px; flex-wrap:wrap; }
+    .results-summary { margin:0; color:var(--muted); font-size:.9rem; }
+    .tool-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .btn-tool { min-height:38px; padding:8px 13px; border:1px solid #cfd9e7; color:var(--navy); background:#fff; font-size:.82rem; }
+    .btn-tool:hover { background:#f3f7fc; }
+    .filter-panel { margin:0 0 14px; padding:18px; border:1px solid var(--line); border-radius:14px; background:#fff; box-shadow:0 8px 24px rgba(23,54,93,.05); }
+    .filter-grid { display:grid; grid-template-columns:repeat(5,minmax(130px,1fr)); gap:12px; }
+    .filter-field label { display:block; margin-bottom:6px; color:#536177; font-size:.72rem; font-weight:800; text-transform:uppercase; }
+    .filter-field select, .filter-field input { width:100%; min-height:40px; padding:8px 10px; border:1px solid #cdd6e3; border-radius:9px; background:#fff; color:var(--ink); }
+    .filter-footer { display:flex; justify-content:flex-end; margin-top:12px; }
+    .export-wrap { position:relative; }
+    .export-menu { position:absolute; right:0; top:calc(100% + 6px); z-index:20; min-width:165px; padding:6px; border:1px solid var(--line); border-radius:11px; background:#fff; box-shadow:0 14px 35px rgba(23,54,93,.16); }
+    .export-menu button { display:block; width:100%; padding:9px 11px; border:0; border-radius:8px; text-align:left; background:#fff; color:var(--ink); font-size:.82rem; cursor:pointer; }
+    .export-menu button:hover { background:#f1f6fd; }
+    .empty { margin-top: 24px; padding: 34px; text-align: center; border: 1px dashed #bdc8d8; border-radius: var(--radius); color: var(--muted); background: rgba(255,255,255,.6); }
     .empty { margin-top: 24px; padding: 34px; text-align: center; border: 1px dashed #bdc8d8; border-radius: var(--radius); color: var(--muted); background: rgba(255,255,255,.6); }
 
     .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 15px; background: #fff; box-shadow: 0 10px 30px rgba(23,54,93,.06); }
@@ -197,11 +211,14 @@
       main { width: min(100% - 22px, 1180px); padding-top: 25px; }
       .dashboard-head { align-items: start; flex-direction: column; }
       .search-row { grid-template-columns: 1fr; }
+      .filter-grid { grid-template-columns:1fr 1fr; }
+      .results-tools { align-items:flex-start; }
       table { min-width: 1080px; }
       th, td { padding: 12px 10px; }
       th { font-size: .7rem; }
       td { font-size: .82rem; }
     }
+    @media (max-width:520px) { .filter-grid { grid-template-columns:1fr; } .tool-actions { width:100%; } .tool-actions .btn-tool, .export-wrap { flex:1; } .export-wrap .btn-tool { width:100%; } }
   </style>
 </head>
 <body>
@@ -280,7 +297,30 @@
           <p id="searchMessage" class="message" role="status" aria-live="polite"></p>
         </form>
 
-        <p id="resultsSummary" class="results-summary" hidden></p>
+        <div id="resultsTools" class="results-tools" hidden>
+          <p id="resultsSummary" class="results-summary"></p>
+          <div class="tool-actions">
+            <button id="filterBtn" class="btn btn-tool" type="button">⚙ Filtrar</button>
+            <div class="export-wrap">
+              <button id="exportBtn" class="btn btn-tool" type="button">↓ Exportar ▾</button>
+              <div id="exportMenu" class="export-menu" hidden>
+                <button type="button" data-export="pdf">PDF</button>
+                <button type="button" data-export="xlsx">Excel (.xlsx)</button>
+                <button type="button" data-export="csv">CSV</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="filterPanel" class="filter-panel" hidden>
+          <div class="filter-grid">
+            <div class="filter-field"><label for="filterPeriod">Periodo</label><select id="filterPeriod"><option value="">Todos</option></select></div>
+            <div class="filter-field"><label for="filterArea">Subgerencia</label><select id="filterArea"><option value="">Todas</option></select></div>
+            <div class="filter-field"><label for="filterStatus">Situación</label><select id="filterStatus"><option value="">Todas</option></select></div>
+            <div class="filter-field"><label for="filterDeliverables">Entregables</label><select id="filterDeliverables"><option value="">Todos</option></select></div>
+            <div class="filter-field"><label for="filterOc">N.° OC</label><input id="filterOc" type="text" inputmode="numeric" placeholder="Filtrar OC"></div>
+          </div>
+          <div class="filter-footer"><button id="clearFilters" class="btn btn-tool" type="button">Limpiar filtros</button></div>
+        </div>
         <div id="emptyState" class="empty">Realiza una búsqueda para visualizar el historial.</div>
         <div id="tableWrap" class="table-wrap" hidden>
           <table>
@@ -306,6 +346,9 @@
     </main>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
@@ -329,6 +372,12 @@
     const emptyState = $('#emptyState');
     const resultCount = $('#resultCount');
     const resultsSummary = $('#resultsSummary');
+    const resultsTools = $('#resultsTools');
+    const filterPanel = $('#filterPanel');
+    const exportMenu = $('#exportMenu');
+    let allRows = [];
+    let visibleRows = [];
+    let currentTerm = '';
 
     const escapeHTML = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
@@ -400,7 +449,10 @@
       tableWrap.hidden = true;
       emptyState.hidden = false;
       resultCount.textContent = '—';
-      resultsSummary.hidden = true;
+      resultsTools.hidden = true;
+      filterPanel.hidden = true;
+      allRows = [];
+      visibleRows = [];
     });
 
     searchForm.addEventListener('submit', async (event) => {
@@ -436,22 +488,66 @@
       renderResults(data || [], term);
     });
 
+    function uniqueValues(key) {
+      return [...new Set(allRows.map(r => r[key]).filter(v => v !== null && v !== undefined && v !== ''))]
+        .sort((a,b) => String(a).localeCompare(String(b), 'es', {numeric:true}));
+    }
+
+    function fillSelect(selector, values, firstLabel) {
+      const el = $(selector);
+      const current = el.value;
+      el.innerHTML = '<option value="">'+firstLabel+'</option>' + values.map(v => '<option value="'+escapeHTML(v)+'">'+escapeHTML(v)+'</option>').join('');
+      if ([...el.options].some(o => o.value === current)) el.value = current;
+    }
+
+    function prepareFilters() {
+      fillSelect('#filterPeriod', uniqueValues('periodo'), 'Todos');
+      fillSelect('#filterArea', uniqueValues('subgerencia'), 'Todas');
+      fillSelect('#filterStatus', uniqueValues('estado_oc'), 'Todas');
+      fillSelect('#filterDeliverables', uniqueValues('numero_entregables'), 'Todos');
+    }
+
+    function applyFilters() {
+      const period = $('#filterPeriod').value;
+      const area = $('#filterArea').value;
+      const status = $('#filterStatus').value;
+      const deliverables = $('#filterDeliverables').value;
+      const oc = $('#filterOc').value.trim();
+      visibleRows = allRows.filter(row =>
+        (!period || String(row.periodo ?? '') === period) &&
+        (!area || String(row.subgerencia ?? '') === area) &&
+        (!status || String(row.estado_oc ?? '') === status) &&
+        (!deliverables || String(row.numero_entregables ?? '') === deliverables) &&
+        (!oc || String(row.numero_oc ?? '').includes(oc))
+      );
+      drawRows();
+    }
+
     function renderResults(rows, term) {
-      resultCount.textContent = String(rows.length);
-      resultsSummary.textContent = `${rows.length} resultado${rows.length === 1 ? '' : 's'} para “${term}”`;
-      resultsSummary.hidden = false;
+      allRows = rows;
+      visibleRows = rows;
+      currentTerm = term;
+      prepareFilters();
+      resultsTools.hidden = false;
+      drawRows();
+    }
+
+    function drawRows() {
+      resultCount.textContent = String(visibleRows.length);
+      const filtered = visibleRows.length !== allRows.length;
+      resultsSummary.textContent = `${visibleRows.length} resultado${visibleRows.length === 1 ? '' : 's'}${filtered ? ' filtrados' : ''} para “${currentTerm}”`;
       resultsBody.innerHTML = '';
 
-      if (!rows.length) {
+      if (!visibleRows.length) {
         tableWrap.hidden = true;
-        emptyState.textContent = 'No se encontraron órdenes de compra con ese criterio.';
+        emptyState.textContent = allRows.length ? 'No hay registros que coincidan con los filtros aplicados.' : 'No se encontraron órdenes de compra con ese criterio.';
         emptyState.hidden = false;
         return;
       }
 
       emptyState.hidden = true;
       tableWrap.hidden = false;
-      resultsBody.innerHTML = rows.map((row) => {
+      resultsBody.innerHTML = visibleRows.map((row) => {
         const exited = row.estado_oc === 'DESISTIÓ' || row.estado_oc === 'ANULADO';
         return `
           <tr>
@@ -469,6 +565,91 @@
           </tr>`;
       }).join('');
     }
+
+    ['#filterPeriod','#filterArea','#filterStatus','#filterDeliverables'].forEach(sel => $(sel).addEventListener('change', applyFilters));
+    $('#filterOc').addEventListener('input', applyFilters);
+    $('#filterBtn').addEventListener('click', () => { filterPanel.hidden = !filterPanel.hidden; });
+    $('#clearFilters').addEventListener('click', () => {
+      ['#filterPeriod','#filterArea','#filterStatus','#filterDeliverables','#filterOc'].forEach(sel => $(sel).value = '');
+      applyFilters();
+    });
+    $('#exportBtn').addEventListener('click', () => { exportMenu.hidden = !exportMenu.hidden; });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.export-wrap')) exportMenu.hidden = true;
+    });
+
+    const exportData = () => visibleRows.map(row => ({
+      'Locador': row.apellidos_nombres ?? '',
+      'RUC': row.ruc ?? '',
+      'N.° OC': row.numero_oc ?? '',
+      'Expediente': row.expediente ?? '',
+      'Monto': Number(row.monto_total ?? 0),
+      'Inicio': formatDate(row.fecha_inicio),
+      'Término': formatDate(row.fecha_termino),
+      'Subgerencia': row.subgerencia ?? '',
+      'Entregables': row.numero_entregables ?? '',
+      'Situación': row.estado_oc ?? '',
+      'Periodo': row.periodo ?? ''
+    }));
+
+    function downloadBlob(blob, filename) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+
+    function exportCSV() {
+      const data = exportData();
+      if (!data.length) return;
+      const headers = Object.keys(data[0]);
+      const quote = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+      const csv = '\uFEFF' + [headers.map(quote).join(';'), ...data.map(r => headers.map(h => quote(r[h])).join(';'))].join('\r\n');
+      downloadBlob(new Blob([csv], {type:'text/csv;charset=utf-8;'}), 'historial_locadores.csv');
+    }
+
+    function exportXLSX() {
+      const data = exportData();
+      if (!data.length) return;
+      const ws = XLSX.utils.json_to_sheet(data);
+      ws['!cols'] = [{wch:32},{wch:14},{wch:14},{wch:20},{wch:14},{wch:12},{wch:12},{wch:16},{wch:12},{wch:14},{wch:18}];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Historial');
+      XLSX.writeFile(wb, 'historial_locadores.xlsx');
+    }
+
+    function exportPDF() {
+      const data = exportData();
+      if (!data.length) return;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
+      doc.setFontSize(16);
+      doc.text('Historial de órdenes de compra', 14, 15);
+      doc.setFontSize(9);
+      doc.text('Consulta: ' + currentTerm + ' · Registros: ' + visibleRows.length + ' · Generado: ' + new Date().toLocaleString('es-PE'), 14, 21);
+      const headers = Object.keys(data[0]);
+      doc.autoTable({
+        startY:26,
+        head:[headers],
+        body:data.map(r => headers.map(h => h === 'Monto' ? formatMoney(r[h]) : String(r[h] ?? ''))),
+        styles:{fontSize:6.7, cellPadding:1.6, overflow:'linebreak'},
+        headStyles:{fontStyle:'bold'},
+        margin:{left:8,right:8}
+      });
+      doc.save('historial_locadores.pdf');
+    }
+
+    exportMenu.addEventListener('click', (e) => {
+      const type = e.target.dataset.export;
+      if (!type) return;
+      exportMenu.hidden = true;
+      if (type === 'csv') exportCSV();
+      if (type === 'xlsx') exportXLSX();
+      if (type === 'pdf') exportPDF();
+    });
 
     const { data: { session } } = await supabase.auth.getSession();
     showSession(session);
