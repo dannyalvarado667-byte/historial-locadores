@@ -839,17 +839,18 @@
     });
 
     const exportData = () => visibleRows.map(row => ({
-      'Locador': row.apellidos_nombres ?? '',
+      'Apellidos y nombres': row.apellidos_nombres ?? '',
       'RUC': row.ruc ?? '',
       'N.° OC': row.numero_oc ?? '',
-      'Expediente': row.expediente ?? '',
-      'Monto': Number(row.monto_total ?? 0),
-      'Inicio': formatDate(row.fecha_inicio),
-      'Término': formatDate(row.fecha_termino),
-      'Subgerencia': row.subgerencia ?? '',
-      'Entregables': row.numero_entregables ?? '',
-      'Situación': displayStatus(row.estado_oc),
-      'Periodo': row.periodo ?? ''
+      'Expediente SGD': row.expediente ?? '',
+      'Monto total': Number(row.monto_total ?? 0),
+      'Fecha inicio OC': formatDate(row.fecha_inicio),
+      'Fecha de término OC': formatDate(row.fecha_termino),
+      'Plazo de ejecución': executionDays(row.fecha_inicio, row.fecha_termino),
+      'Área usuaria': row.subgerencia ?? '',
+      '# Entregables': row.numero_entregables ?? '',
+      'Status': displayStatus(row.estado_oc),
+      'Crédito presupuestal': row.periodo ?? ''
     }));
 
     function downloadBlob(blob, filename) {
@@ -875,7 +876,7 @@
       const data = exportData();
       if (!data.length) return;
       const ws = XLSX.utils.json_to_sheet(data);
-      ws['!cols'] = [{wch:32},{wch:14},{wch:14},{wch:20},{wch:14},{wch:12},{wch:12},{wch:16},{wch:12},{wch:14},{wch:18}];
+      ws['!cols'] = [{wch:34},{wch:14},{wch:14},{wch:22},{wch:14},{wch:16},{wch:18},{wch:17},{wch:16},{wch:14},{wch:18},{wch:20}];
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Historial');
       XLSX.writeFile(wb, 'historial_locadores.xlsx');
@@ -894,7 +895,7 @@
       doc.autoTable({
         startY:26,
         head:[headers],
-        body:data.map(r => headers.map(h => h === 'Monto' ? formatMoney(r[h]) : String(r[h] ?? ''))),
+        body:data.map(r => headers.map(h => h === 'Monto total' ? formatMoney(r[h]) : String(r[h] ?? ''))),
         styles:{fontSize:6.7, cellPadding:1.6, overflow:'linebreak'},
         headStyles:{fontStyle:'bold'},
         margin:{left:8,right:8}
