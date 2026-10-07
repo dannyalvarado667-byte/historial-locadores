@@ -221,6 +221,10 @@
     .mono { font-variant-numeric: tabular-nums; white-space: nowrap; }
     .person-link { appearance:none; border:0; padding:0; background:none; color:inherit; font:inherit; font-weight:inherit; text-align:left; cursor:pointer; text-decoration:none; }
     .person-link:hover { text-decoration:underline; }
+    .group-row td { padding:12px 10px; background:#edf4fc; border-top:2px solid #c8d9ed; border-bottom:1px solid #c8d9ed; color:var(--navy); }
+    .group-title { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-weight:800; }
+    .group-meta { font-size:.72rem; font-weight:700; color:var(--muted); }
+
     .detail-overlay { position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; padding:24px; background:rgba(15,35,62,.48); backdrop-filter:blur(2px); }
     .detail-overlay[hidden] { display:none; }
     .detail-card { width:min(720px,100%); max-height:90vh; overflow:auto; background:#fff; border-radius:18px; box-shadow:0 24px 70px rgba(10,31,58,.28); }
@@ -408,6 +412,10 @@
         <div id="resultsTools" class="results-tools" hidden>
           <p id="resultsSummary" class="results-summary"></p>
           <div class="tool-actions">
+            <select id="viewMode" class="btn btn-tool" aria-label="Vista de resultados" hidden>
+              <option value="list">Lista completa</option>
+              <option value="group">Agrupar por locador</option>
+            </select>
         <button id="clearSearchBtn" class="btn btn-tool" type="button">Limpiar</button>
             <div class="export-wrap">
               <button id="exportBtn" class="btn btn-tool" type="button">↓ Exportar ▾</button>
@@ -496,12 +504,14 @@
     const resultsTools = $('#resultsTools');
     const filterPanel = $('#filterPanel');
     const exportMenu = $('#exportMenu');
+    const viewMode = $('#viewMode');
     const detailOverlay = $('#detailOverlay');
     const detailGrid = $('#detailGrid');
     const detailSubtitle = $('#detailSubtitle');
     let allRows = [];
     let visibleRows = [];
     let currentTerm = '';
+    let currentSearchMode = 'locador';
 
     const escapeHTML = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
@@ -626,6 +636,9 @@
       searchInput.inputMode = 'search';
       searchHelp.textContent = 'Escribe al menos tres letras del nombre o los 11 dígitos del RUC.';
       currentTerm = '';
+      currentSearchMode = 'locador';
+      viewMode.value = 'list';
+      viewMode.hidden = true;
       allRows = [];
       visibleRows = [];
       resultsBody.innerHTML = '';
@@ -705,6 +718,7 @@
         return;
       }
 
+      currentSearchMode = mode;
       renderResults(data || [], mode === 'year' ? 'Año ' + term : term);
     });
 
@@ -753,6 +767,8 @@
       prepareFilters();
       resultsTools.hidden = false;
       filterPanel.hidden = false;
+      viewMode.hidden = currentSearchMode !== 'year';
+      if (currentSearchMode !== 'year') viewMode.value = 'list';
       drawRows();
     }
 
@@ -771,11 +787,12 @@
 
       emptyState.hidden = true;
       tableWrap.hidden = false;
-      resultsBody.innerHTML = visibleRows.map((row) => {
+      const rowHtml = (row) => {
         const exited = row.estado_oc === 'DESISTIÓ' || row.estado_oc === 'ANULADO';
+        const index = visibleRows.indexOf(row);
         return `
           <tr>
-            <td class="person"><button class="person-link" type="button" data-detail-index="${visibleRows.indexOf(row)}">${escapeHTML(row.apellidos_nombres)}</button></td>
+            <td class="person"><button class="person-link" type="button" data-detail-index="${index}">${escapeHTML(row.apellidos_nombres)}</button></td>
             <td class="mono">${escapeHTML(row.ruc)}</td>
             <td class="mono">${escapeHTML(row.numero_oc)}</td>
             <td class="mono">${escapeHTML(row.expediente || '—')}</td>
@@ -788,7 +805,26 @@
             <td><span class="badge ${exited ? 'badge-exit' : 'badge-active'}">${escapeHTML(displayStatus(row.estado_oc))}</span></td>
             <td>${escapeHTML(row.periodo || '—')}</td>
           </tr>`;
-      }).join('');
+      };
+
+      if (currentSearchMode === 'year' && viewMode.value === 'group') {
+        const groups = new Map();
+        visibleRows.forEach(row => {
+          const key = String(row.ruc || row.apellidos_nombres || '');
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(row);
+        });
+        const ordered = [...groups.values()].sort((a,b) =>
+          String(a[0]?.apellidos_nombres || '').localeCompare(String(b[0]?.apellidos_nombres || ''), 'es')
+        );
+        resultsBody.innerHTML = ordered.map(rows => {
+          const first = rows[0];
+          return `<tr class="group-row"><td colspan="12"><div class="group-title">${escapeHTML(first.apellidos_nombres || 'Sin nombre')} <span class="group-meta">RUC ${escapeHTML(first.ruc || '—')} · ${rows.length} orden${rows.length === 1 ? '' : 'es'} de compra</span></div></td></tr>` +
+            rows.map(rowHtml).join('');
+        }).join('');
+      } else {
+        resultsBody.innerHTML = visibleRows.map(rowHtml).join('');
+      }
     }
 
     function openDetail(row) {
@@ -829,6 +865,8 @@
     $('#detailClose').addEventListener('click', closeDetail);
     detailOverlay.addEventListener('click', (event) => { if (event.target === detailOverlay) closeDetail(); });
     document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !detailOverlay.hidden) closeDetail(); });
+
+    viewMode.addEventListener('change', drawRows);
 
     ['#filterPeriod','#filterArea','#filterStatus','#filterDeliverables'].forEach(sel => $(sel).addEventListener('change', applyFilters));
     $('#filterOc').addEventListener('input', applyFilters);
