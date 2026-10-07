@@ -441,7 +441,7 @@
                 <th>Monto total</th>
                 <th>Fecha inicio OC</th>
                 <th>Fecha de término OC</th>
-                <th>Plazo de ejecución</th>
+                <th>Plazo de ejecución en días</th>
                 <th>Área usuaria</th>
                 <th># Entregables</th>
                 <th>Status</th>
@@ -513,15 +513,18 @@
       return new Intl.DateTimeFormat('es-PE').format(new Date(year, month - 1, day));
     };
 
-    const executionDays = (start, end) => {
-      if (!start || !end) return '—';
+    const executionDaysNumber = (start, end) => {
+      if (!start || !end) return null;
       const [sy, sm, sd] = String(start).slice(0,10).split('-').map(Number);
       const [ey, em, ed] = String(end).slice(0,10).split('-').map(Number);
       const startUTC = Date.UTC(sy, sm - 1, sd);
       const endUTC = Date.UTC(ey, em - 1, ed);
-      if (!Number.isFinite(startUTC) || !Number.isFinite(endUTC) || endUTC < startUTC) return '—';
-      const days = Math.floor((endUTC - startUTC) / 86400000) + 1;
-      return days + (days === 1 ? ' día' : ' días');
+      if (!Number.isFinite(startUTC) || !Number.isFinite(endUTC) || endUTC < startUTC) return null;
+      return Math.floor((endUTC - startUTC) / 86400000) + 1;
+    };
+    const executionDays = (start, end) => {
+      const days = executionDaysNumber(start, end);
+      return days == null ? '—' : days + (days === 1 ? ' día' : ' días');
     };
 
     const displayStatus = (value) => value === 'ACTIVO' ? 'SIN INCIDENCIA' : (value ?? '—');
@@ -798,7 +801,7 @@
         ['Monto total', formatMoney(row.monto_total)],
         ['Fecha inicio OC', formatDate(row.fecha_inicio)],
         ['Fecha de término OC', formatDate(row.fecha_termino)],
-        ['Plazo de ejecución', executionDays(row.fecha_inicio, row.fecha_termino)],
+        ['Plazo de ejecución en días', executionDaysNumber(row.fecha_inicio, row.fecha_termino)],
         ['Área usuaria', row.subgerencia],
         ['# Entregables', row.numero_entregables],
         ['Status', displayStatus(row.estado_oc)],
@@ -846,7 +849,7 @@
       'Monto total': Number(row.monto_total ?? 0),
       'Fecha inicio OC': formatDate(row.fecha_inicio),
       'Fecha de término OC': formatDate(row.fecha_termino),
-      'Plazo de ejecución': executionDays(row.fecha_inicio, row.fecha_termino),
+      'Plazo de ejecución en días': executionDaysNumber(row.fecha_inicio, row.fecha_termino),
       'Área usuaria': row.subgerencia ?? '',
       '# Entregables': row.numero_entregables ?? '',
       'Status': displayStatus(row.estado_oc),
