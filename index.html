@@ -674,9 +674,50 @@
       if (type === 'pdf') exportPDF();
     });
 
+    // Cierre automático por inactividad: 5 minutos.
+    const INACTIVITY_LIMIT = 5 * 60 * 1000;
+    let inactivityTimer = null;
+
+    function resetInactivityTimer() {
+      clearTimeout(inactivityTimer);
+      if (appView.hidden) return;
+      inactivityTimer = setTimeout(async () => {
+        await supabase.auth.signOut();
+        clearTimeout(inactivityTimer);
+        inactivityTimer = null;
+        resultsBody.innerHTML = '';
+        tableWrap.hidden = true;
+        emptyState.textContent = 'La sesión se cerró por 5 minutos de inactividad.';
+        emptyState.hidden = false;
+        resultCount.textContent = '—';
+        resultsTools.hidden = true;
+        filterPanel.hidden = true;
+        allRows = [];
+        visibleRows = [];
+        showMessage(loginMessage, 'La sesión se cerró por 5 minutos de inactividad.', 'error');
+      }, INACTIVITY_LIMIT);
+    }
+
+    ['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach((eventName) => {
+      window.addEventListener(eventName, resetInactivityTimer, { passive: true });
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) resetInactivityTimer();
+    });
+
     const { data: { session } } = await supabase.auth.getSession();
     showSession(session);
-    supabase.auth.onAuthStateChange((_event, currentSession) => showSession(currentSession));
+    if (session?.user) resetInactivityTimer();
+
+    supabase.auth.onAuthStateChange((_event, currentSession) => {
+      showSession(currentSession);
+      if (currentSession?.user) resetInactivityTimer();
+      else {
+        clearTimeout(inactivityTimer);
+        inactivityTimer = null;
+      }
+    });
   </script>
 </body>
 </html>
