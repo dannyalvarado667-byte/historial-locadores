@@ -216,6 +216,20 @@
     tbody tr:hover { background: #f9fbff; }
     .person { min-width: 0; font-weight: 700; color: var(--navy); overflow-wrap: anywhere; }
     .mono { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .person-link { appearance:none; border:0; padding:0; background:none; color:inherit; font:inherit; font-weight:inherit; text-align:left; cursor:pointer; text-decoration:none; }
+    .person-link:hover { text-decoration:underline; }
+    .detail-overlay { position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; padding:24px; background:rgba(15,35,62,.48); backdrop-filter:blur(2px); }
+    .detail-overlay[hidden] { display:none; }
+    .detail-card { width:min(720px,100%); max-height:90vh; overflow:auto; background:#fff; border-radius:18px; box-shadow:0 24px 70px rgba(10,31,58,.28); }
+    .detail-head { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; padding:22px 24px 16px; border-bottom:1px solid var(--line); }
+    .detail-head h2 { margin:0; color:var(--navy); font-size:1.25rem; }
+    .detail-head p { margin:5px 0 0; color:var(--muted); font-size:.85rem; }
+    .detail-close { width:38px; height:38px; border:1px solid var(--line); border-radius:10px; background:#fff; color:var(--navy); font-size:1.25rem; cursor:pointer; }
+    .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:0; padding:10px 24px 24px; }
+    .detail-item { padding:14px 8px; border-bottom:1px solid #edf1f6; }
+    .detail-item span { display:block; margin-bottom:5px; color:var(--muted); font-size:.7rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
+    .detail-item strong { color:var(--ink); font-size:.92rem; overflow-wrap:anywhere; }
+
     .badge { display: inline-flex; padding: 4px 7px; border-radius: 999px; font-size: .66rem; font-weight: 800; white-space: nowrap; line-height: 1.1; }
     .badge-active { color: #0d6947; background: #dff5eb; }
     .badge-exit { color: #9e2433; background: #fde8ec; }
@@ -225,6 +239,8 @@
 
     @media (max-width: 800px) {
       .login-wrap { grid-template-columns: 1fr; margin-top: 12px; }
+      .detail-grid { grid-template-columns:1fr; padding-inline:18px; }
+      .detail-overlay { padding:12px; }
       .intro { padding: 38px 30px; }
       .topbar { padding-inline: 18px; }
       .brand span, .user-email { display: none; }
@@ -430,6 +446,15 @@
         </div>
       </section>
     </main>
+    <div id="detailOverlay" class="detail-overlay" hidden>
+      <section class="detail-card" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+        <div class="detail-head">
+          <div><h2 id="detailTitle">Detalle de la Orden de Compra</h2><p id="detailSubtitle"></p></div>
+          <button id="detailClose" class="detail-close" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <div id="detailGrid" class="detail-grid"></div>
+      </section>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -464,6 +489,9 @@
     const resultsTools = $('#resultsTools');
     const filterPanel = $('#filterPanel');
     const exportMenu = $('#exportMenu');
+    const detailOverlay = $('#detailOverlay');
+    const detailGrid = $('#detailGrid');
+    const detailSubtitle = $('#detailSubtitle');
     let allRows = [];
     let visibleRows = [];
     let currentTerm = '';
@@ -737,7 +765,7 @@
         const exited = row.estado_oc === 'DESISTIÓ' || row.estado_oc === 'ANULADO';
         return `
           <tr>
-            <td class="person">${escapeHTML(row.apellidos_nombres)}</td>
+            <td class="person"><button class="person-link" type="button" data-detail-index="${visibleRows.indexOf(row)}">${escapeHTML(row.apellidos_nombres)}</button></td>
             <td class="mono">${escapeHTML(row.ruc)}</td>
             <td class="mono">${escapeHTML(row.numero_oc)}</td>
             <td class="mono">${escapeHTML(row.expediente || '—')}</td>
@@ -752,6 +780,45 @@
           </tr>`;
       }).join('');
     }
+
+    function openDetail(row) {
+      if (!row) return;
+      const items = [
+        ['Apellidos y nombres', row.apellidos_nombres],
+        ['RUC', row.ruc],
+        ['N.° OC', row.numero_oc],
+        ['Expediente SGD', row.expediente],
+        ['Monto total', formatMoney(row.monto_total)],
+        ['Fecha inicio OC', formatDate(row.fecha_inicio)],
+        ['Fecha de término OC', formatDate(row.fecha_termino)],
+        ['Plazo de ejecución', executionDays(row.fecha_inicio, row.fecha_termino)],
+        ['Área usuaria', row.subgerencia],
+        ['# Entregables', row.numero_entregables],
+        ['Status', displayStatus(row.estado_oc)],
+        ['Crédito presupuestal', row.periodo]
+      ];
+      detailSubtitle.textContent = 'OC N.° ' + (row.numero_oc || '—');
+      detailGrid.innerHTML = items.map(([label,value]) =>
+        '<div class="detail-item"><span>' + escapeHTML(label) + '</span><strong>' + escapeHTML(value ?? '—') + '</strong></div>'
+      ).join('');
+      detailOverlay.hidden = false;
+      document.body.style.overflow = 'hidden';
+      $('#detailClose').focus();
+    }
+
+    function closeDetail() {
+      detailOverlay.hidden = true;
+      document.body.style.overflow = '';
+    }
+
+    resultsBody.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-detail-index]');
+      if (!button) return;
+      openDetail(visibleRows[Number(button.dataset.detailIndex)]);
+    });
+    $('#detailClose').addEventListener('click', closeDetail);
+    detailOverlay.addEventListener('click', (event) => { if (event.target === detailOverlay) closeDetail(); });
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !detailOverlay.hidden) closeDetail(); });
 
     ['#filterPeriod','#filterArea','#filterStatus','#filterDeliverables'].forEach(sel => $(sel).addEventListener('change', applyFilters));
     $('#filterOc').addEventListener('input', applyFilters);
