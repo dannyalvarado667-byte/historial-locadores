@@ -173,7 +173,10 @@
     .stat strong { display: block; font-size: 1.25rem; color: var(--navy); }
     .stat span { font-size: .78rem; color: var(--muted); }
 
-    .search-card { padding: 24px; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; box-shadow: 0 10px 30px rgba(23,54,93,.07); }
+    .search-card { position:relative; min-height:160px; padding:24px; border:1px solid var(--line); border-radius:var(--radius); background:#fff; box-shadow:0 10px 30px rgba(23,54,93,.07); }
+    .search-stat { position:absolute; left:65%; top:50%; transform:translate(-50%,-50%); min-width:210px; padding:18px 24px; text-align:center; border:1px solid var(--line); border-radius:13px; background:#fff; }
+    .search-stat strong { display:block; font-size:1.25rem; color:var(--navy); }
+    .search-stat span { font-size:.78rem; color:var(--muted); }
     .search-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 50%; }
     .search-row .btn-primary { grid-column: 1 / -1; }
     .search-help { margin: 11px 0 0; color: var(--muted); font-size: .84rem; }
@@ -247,6 +250,8 @@
       main { width: min(100% - 22px, 1500px); padding-top: 25px; }
       .dashboard-head { align-items: start; flex-direction: column; }
       .search-row { grid-template-columns: 1fr; width: 100%; }
+      .search-card { min-height:0; }
+      .search-stat { position:static; transform:none; width:100%; margin-top:14px; }
       .filter-grid { grid-template-columns:1fr 1fr; }
       .results-tools { align-items:flex-start; }
       .table-wrap { overflow-x: auto; overflow-y: visible; }
@@ -353,10 +358,7 @@
             <h1 id="appTitle">Historial de órdenes de compra</h1>
             <p>Consulta por coincidencia de nombre o por RUC completo.</p>
           </div>
-          <div class="stat">
-            <strong id="resultCount">—</strong>
-            <span>registros encontrados</span>
-          </div>
+
         </div>
 
         <section id="adminPanel" class="admin-panel" hidden>
@@ -394,6 +396,10 @@
               <option value="2027">2027</option>
             </select>
             <button id="searchBtn" class="btn btn-primary" type="submit">Buscar historial</button>
+          </div>
+          <div class="search-stat">
+            <strong id="resultCount">—</strong>
+            <span>registros encontrados</span>
           </div>
           <p id="searchHelp" class="search-help">Escribe al menos tres letras del nombre o los 11 dígitos del RUC.</p>
           <p id="searchMessage" class="message" role="status" aria-live="polite"></p>
