@@ -904,20 +904,73 @@
       setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     }
 
+    function groupedExportSets() {
+      const groups = new Map();
+      visibleRows.forEach(row => {
+        const key = String(row.ruc || row.apellidos_nombres || '');
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(row);
+      });
+      return [...groups.values()].sort((a,b) =>
+        String(a[0]?.apellidos_nombres || '').localeCompare(String(b[0]?.apellidos_nombres || ''), 'es')
+      );
+    }
+
     function exportCSV() {
       const data = exportData();
       if (!data.length) return;
       const headers = Object.keys(data[0]);
       const quote = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
-      const csv = '\uFEFF' + [headers.map(quote).join(';'), ...data.map(r => headers.map(h => quote(r[h])).join(';'))].join('\r\n');
+      let lines = [headers.map(quote).join(';')];
+
+      if (currentSearchMode === 'year' && viewMode.value === 'group') {
+        const byOc = new Map(visibleRows.map((row,i) => [String(row.numero_oc ?? '') + '|' + i, data[i]]));
+        groupedExportSets().forEach(rows => {
+          const first = rows[0];
+          lines.push(quote((first.apellidos_nombres || 'Sin nombre') + ' · RUC ' + (first.ruc || '—') + ' · ' + rows.length + ' OC'));
+          rows.forEach(row => {
+            const idx = visibleRows.indexOf(row);
+            const item = data[idx];
+            lines.push(headers.map(h => quote(item[h])).join(';'));
+          });
+          lines.push('');
+        });
+      } else {
+        lines.push(...data.map(r => headers.map(h => quote(r[h])).join(';')));
+      }
+      const csv = '\uFEFF' + lines.join('\r\n');
       downloadBlob(new Blob([csv], {type:'text/csv;charset=utf-8;'}), 'historial_locadores.csv');
     }
 
     function exportXLSX() {
       const data = exportData();
       if (!data.length) return;
-      const ws = XLSX.utils.json_to_sheet(data);
-      ws['!cols'] = [{wch:34},{wch:14},{wch:14},{wch:22},{wch:14},{wch:16},{wch:18},{wch:17},{wch:16},{wch:14},{wch:18},{wch:20}];
+      const headers = Object.keys(data[0]);
+      let ws;
+
+      if (currentSearchMode === 'year' && viewMode.value === 'group') {
+        const aoa = [headers];
+        groupedExportSets().forEach(rows => {
+          const first = rows[0];
+          aoa.push([(first.apellidos_nombres || 'Sin nombre') + ' · RUC ' + (first.ruc || '—') + ' · ' + rows.length + ' OC']);
+          rows.forEach(row => {
+            const item = data[visibleRows.indexOf(row)];
+            aoa.push(headers.map(h => item[h]));
+          });
+          aoa.push([]);
+        });
+        ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!merges'] = [];
+        let excelRow = 1;
+        groupedExportSets().forEach(rows => {
+          ws['!merges'].push({s:{r:excelRow,c:0},e:{r:excelRow,c:headers.length-1}});
+          excelRow += rows.length + 2;
+        });
+      } else {
+        ws = XLSX.utils.json_to_sheet(data);
+      }
+
+      ws['!cols'] = [{wch:34},{wch:14},{wch:14},{wch:22},{wch:14},{wch:16},{wch:18},{wch:22},{wch:16},{wch:14},{wch:18},{wch:20}];
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Historial');
       XLSX.writeFile(wb, 'historial_locadores.xlsx');
@@ -933,14 +986,40 @@
       doc.setFontSize(9);
       doc.text('Consulta: ' + currentTerm + ' · Registros: ' + visibleRows.length + ' · Generado: ' + new Date().toLocaleString('es-PE'), 14, 21);
       const headers = Object.keys(data[0]);
-      doc.autoTable({
-        startY:26,
-        head:[headers],
-        body:data.map(r => headers.map(h => h === 'Monto total' ? formatMoney(r[h]) : String(r[h] ?? ''))),
-        styles:{fontSize:6.7, cellPadding:1.6, overflow:'linebreak'},
-        headStyles:{fontStyle:'bold'},
-        margin:{left:8,right:8}
-      });
+
+      if (currentSearchMode === 'year' && viewMode.value === 'group') {
+        let y = 27;
+        groupedExportSets().forEach((rows, groupIndex) => {
+          if (y > 180) { doc.addPage(); y = 15; }
+          const first = rows[0];
+          doc.setFontSize(9);
+          doc.setFont(undefined, 'bold');
+          doc.text((first.apellidos_nombres || 'Sin nombre') + ' · RUC ' + (first.ruc || '—') + ' · ' + rows.length + ' OC', 10, y);
+          doc.setFont(undefined, 'normal');
+          const body = rows.map(row => {
+            const item = data[visibleRows.indexOf(row)];
+            return headers.map(h => h === 'Monto total' ? formatMoney(item[h]) : String(item[h] ?? ''));
+          });
+          doc.autoTable({
+            startY:y + 3,
+            head:[headers],
+            body,
+            styles:{fontSize:6.2, cellPadding:1.4, overflow:'linebreak'},
+            headStyles:{fontStyle:'bold'},
+            margin:{left:8,right:8}
+          });
+          y = doc.lastAutoTable.finalY + 8;
+        });
+      } else {
+        doc.autoTable({
+          startY:26,
+          head:[headers],
+          body:data.map(r => headers.map(h => h === 'Monto total' ? formatMoney(r[h]) : String(r[h] ?? ''))),
+          styles:{fontSize:6.7, cellPadding:1.6, overflow:'linebreak'},
+          headStyles:{fontStyle:'bold'},
+          margin:{left:8,right:8}
+        });
+      }
       doc.save('historial_locadores.pdf');
     }
 
