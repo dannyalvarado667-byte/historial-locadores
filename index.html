@@ -480,6 +480,8 @@
       return days + (days === 1 ? ' día' : ' días');
     };
 
+    const displayStatus = (value) => value === 'ACTIVO' ? 'SIN INCIDENCIA' : (value ?? '—');
+
     const formatMoney = (value) => value == null
       ? '—'
       : new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(Number(value));
@@ -670,6 +672,9 @@
       fillSelect('#filterPeriod', uniqueValues('periodo'), 'Todos');
       fillSelect('#filterArea', uniqueValues('subgerencia'), 'Todas');
       fillSelect('#filterStatus', uniqueValues('estado_oc'), 'Todas');
+      [...$('#filterStatus').options].forEach(option => {
+        if (option.value === 'ACTIVO') option.textContent = 'SIN INCIDENCIA';
+      });
       fillSelect('#filterDeliverables', uniqueValues('numero_entregables'), 'Todos');
     }
 
@@ -728,7 +733,7 @@
             <td class="mono">${escapeHTML(executionDays(row.fecha_inicio, row.fecha_termino))}</td>
             <td>${escapeHTML(row.subgerencia || '—')}</td>
             <td>${escapeHTML(row.numero_entregables ?? '—')}</td>
-            <td><span class="badge ${exited ? 'badge-exit' : 'badge-active'}">${escapeHTML(row.estado_oc)}</span></td>
+            <td><span class="badge ${exited ? 'badge-exit' : 'badge-active'}">${escapeHTML(displayStatus(row.estado_oc))}</span></td>
             <td>${escapeHTML(row.periodo || '—')}</td>
           </tr>`;
       }).join('');
@@ -755,7 +760,7 @@
       'Término': formatDate(row.fecha_termino),
       'Subgerencia': row.subgerencia ?? '',
       'Entregables': row.numero_entregables ?? '',
-      'Situación': row.estado_oc ?? '',
+      'Situación': displayStatus(row.estado_oc),
       'Periodo': row.periodo ?? ''
     }));
 
