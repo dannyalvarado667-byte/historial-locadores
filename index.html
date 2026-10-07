@@ -361,6 +361,7 @@
           <div class="search-row">
             <input id="searchInput" class="search-input" type="search" maxlength="80" placeholder="Ejemplo: Altamirano o 10456034280" aria-label="Nombre o RUC del locador">
             <button id="searchBtn" class="btn btn-primary" type="submit">Buscar historial</button>
+            <button id="clearSearchBtn" class="btn btn-tool" type="button">Limpiar</button>
           </div>
           <p class="search-help">Escribe al menos tres letras del nombre o los 11 dígitos del RUC.</p>
           <p id="searchMessage" class="message" role="status" aria-live="polite"></p>
@@ -541,6 +542,25 @@
       filterPanel.hidden = true;
       allRows = [];
       visibleRows = [];
+    });
+
+    $('#clearSearchBtn').addEventListener('click', () => {
+      searchInput.value = '';
+      currentTerm = '';
+      allRows = [];
+      visibleRows = [];
+      resultsBody.innerHTML = '';
+      tableWrap.hidden = true;
+      resultsTools.hidden = true;
+      filterPanel.hidden = true;
+      exportMenu.hidden = true;
+      resultCount.textContent = '—';
+      resultsSummary.textContent = '';
+      emptyState.textContent = 'Realiza una búsqueda para visualizar el historial.';
+      emptyState.hidden = false;
+      resetFilters();
+      searchMessage.textContent = '';
+      searchInput.focus();
     });
 
     searchForm.addEventListener('submit', async (event) => {
