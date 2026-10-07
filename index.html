@@ -369,8 +369,7 @@
         <div id="resultsTools" class="results-tools" hidden>
           <p id="resultsSummary" class="results-summary"></p>
           <div class="tool-actions">
-            <button id="filterBtn" class="btn btn-tool" type="button">⚙ Filtrar</button>
-            <div class="export-wrap">
+        <div class="export-wrap">
               <button id="exportBtn" class="btn btn-tool" type="button">↓ Exportar ▾</button>
               <div id="exportMenu" class="export-menu" hidden>
                 <button type="button" data-export="pdf">PDF</button>
@@ -657,7 +656,6 @@
 
     ['#filterPeriod','#filterArea','#filterStatus','#filterDeliverables'].forEach(sel => $(sel).addEventListener('change', applyFilters));
     $('#filterOc').addEventListener('input', applyFilters);
-    $('#filterBtn').addEventListener('click', () => { filterPanel.hidden = !filterPanel.hidden; });
     $('#clearFilters').addEventListener('click', () => {
       ['#filterPeriod','#filterArea','#filterStatus','#filterDeliverables','#filterOc'].forEach(sel => $(sel).value = '');
       applyFilters();
