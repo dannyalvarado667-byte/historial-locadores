@@ -190,6 +190,13 @@
     .filter-grid { display:grid; grid-template-columns:repeat(5,minmax(130px,1fr)); gap:12px; }
     .filter-field label { display:block; margin-bottom:6px; color:#536177; font-size:.72rem; font-weight:800; text-transform:uppercase; }
     .filter-field select, .filter-field input { width:100%; min-height:40px; padding:8px 10px; border:1px solid #cdd6e3; border-radius:9px; background:#fff; color:var(--ink); }
+    .multi-select { position:relative; }
+    .multi-select-btn { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-height:40px; padding:8px 10px; border:1px solid #cdd6e3; border-radius:9px; background:#fff; color:var(--ink); text-align:left; }
+    .multi-select-menu { position:absolute; left:0; right:0; top:calc(100% + 5px); z-index:40; max-height:240px; overflow:auto; padding:7px; border:1px solid #cdd6e3; border-radius:10px; background:#fff; box-shadow:0 12px 30px rgba(23,54,93,.18); }
+    .multi-option { display:flex; align-items:center; gap:9px; padding:8px 7px; border-radius:7px; cursor:pointer; font-size:.84rem; }
+    .multi-option:hover { background:#f3f7fc; }
+    .multi-option input { width:16px; height:16px; min-height:0; margin:0; padding:0; }
+
     .filter-footer { display:flex; justify-content:flex-end; margin-top:12px; }
     .export-wrap { position:relative; }
     .export-menu { position:absolute; right:0; top:calc(100% + 6px); z-index:20; min-width:165px; padding:6px; border:1px solid var(--line); border-radius:11px; background:#fff; box-shadow:0 14px 35px rgba(23,54,93,.16); }
@@ -429,7 +436,12 @@
         </div>
         <div id="filterPanel" class="filter-panel" hidden>
           <div class="filter-grid">
-            <div class="filter-field"><label for="filterPeriod">Crédito presupuestal</label><select id="filterPeriod"><option value="">Todos</option></select></div>
+            <div class="filter-field"><label>Crédito presupuestal</label>
+              <div id="periodMulti" class="multi-select">
+                <button id="periodMultiBtn" class="multi-select-btn" type="button" aria-expanded="false">Todos <span>▾</span></button>
+                <div id="periodMultiMenu" class="multi-select-menu" hidden></div>
+              </div>
+            </div>
             <div class="filter-field"><label for="filterArea">Área usuaria</label><select id="filterArea"><option value="">Todas</option></select></div>
             <div class="filter-field"><label for="filterStatus">Status</label><select id="filterStatus"><option value="">Todas</option></select></div>
             <div class="filter-field"><label for="filterDeliverables">Entregables</label><select id="filterDeliverables"><option value="">Todos</option></select></div>
@@ -512,6 +524,7 @@
     let visibleRows = [];
     let currentTerm = '';
     let currentSearchMode = 'locador';
+    let selectedPeriods = new Set();
 
     const escapeHTML = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
@@ -637,6 +650,7 @@
       searchHelp.textContent = 'Escribe al menos tres letras del nombre o los 11 dígitos del RUC.';
       currentTerm = '';
       currentSearchMode = 'locador';
+      selectedPeriods.clear();
       viewMode.value = 'list';
       viewMode.hidden = true;
       allRows = [];
@@ -735,7 +749,12 @@
     }
 
     function prepareFilters() {
-      fillSelect('#filterPeriod', uniqueValues('periodo'), 'Todos');
+      const periods = uniqueValues('periodo');
+      selectedPeriods = new Set([...selectedPeriods].filter(v => periods.map(String).includes(String(v))));
+      $('#periodMultiMenu').innerHTML =
+        '<label class="multi-option"><input type="checkbox" data-period-all ' + (selectedPeriods.size === 0 ? 'checked' : '') + '> <span>Todos</span></label>' +
+        periods.map(v => '<label class="multi-option"><input type="checkbox" data-period-value="' + escapeHTML(v) + '" ' + (selectedPeriods.has(String(v)) ? 'checked' : '') + '> <span>' + escapeHTML(v) + '</span></label>').join('');
+      updatePeriodButton();
       fillSelect('#filterArea', uniqueValues('subgerencia'), 'Todas');
       fillSelect('#filterStatus', uniqueValues('estado_oc'), 'Todas');
       [...$('#filterStatus').options].forEach(option => {
@@ -745,13 +764,12 @@
     }
 
     function applyFilters() {
-      const period = $('#filterPeriod').value;
       const area = $('#filterArea').value;
       const status = $('#filterStatus').value;
       const deliverables = $('#filterDeliverables').value;
       const oc = $('#filterOc').value.trim();
       visibleRows = allRows.filter(row =>
-        (!period || String(row.periodo ?? '') === period) &&
+        (selectedPeriods.size === 0 || selectedPeriods.has(String(row.periodo ?? ''))) &&
         (!area || String(row.subgerencia ?? '') === area) &&
         (!status || String(row.estado_oc ?? '') === status) &&
         (!deliverables || String(row.numero_entregables ?? '') === deliverables) &&
@@ -868,15 +886,47 @@
 
     viewMode.addEventListener('change', drawRows);
 
-    ['#filterPeriod','#filterArea','#filterStatus','#filterDeliverables'].forEach(sel => $(sel).addEventListener('change', applyFilters));
+    function updatePeriodButton() {
+      const btn = $('#periodMultiBtn');
+      if (!selectedPeriods.size) btn.firstChild.textContent = 'Todos ';
+      else if (selectedPeriods.size === 1) btn.firstChild.textContent = [...selectedPeriods][0] + ' ';
+      else btn.firstChild.textContent = selectedPeriods.size + ' seleccionados ';
+    }
+
+    $('#periodMultiBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const menu = $('#periodMultiMenu');
+      menu.hidden = !menu.hidden;
+      $('#periodMultiBtn').setAttribute('aria-expanded', String(!menu.hidden));
+    });
+    $('#periodMultiMenu').addEventListener('change', (e) => {
+      if (e.target.matches('[data-period-all]')) {
+        selectedPeriods.clear();
+      } else if (e.target.matches('[data-period-value]')) {
+        const value = e.target.dataset.periodValue;
+        if (e.target.checked) selectedPeriods.add(value); else selectedPeriods.delete(value);
+      }
+      const all = $('#periodMultiMenu').querySelector('[data-period-all]');
+      if (all) all.checked = selectedPeriods.size === 0;
+      $('#periodMultiMenu').querySelectorAll('[data-period-value]').forEach(cb => cb.checked = selectedPeriods.has(cb.dataset.periodValue));
+      updatePeriodButton();
+      applyFilters();
+    });
+    ['#filterArea','#filterStatus','#filterDeliverables'].forEach(sel => $(sel).addEventListener('change', applyFilters));
     $('#filterOc').addEventListener('input', applyFilters);
     $('#clearFilters').addEventListener('click', () => {
-      ['#filterPeriod','#filterArea','#filterStatus','#filterDeliverables','#filterOc'].forEach(sel => $(sel).value = '');
+      selectedPeriods.clear();
+      ['#filterArea','#filterStatus','#filterDeliverables','#filterOc'].forEach(sel => $(sel).value = '');
+      prepareFilters();
       applyFilters();
     });
     $('#exportBtn').addEventListener('click', () => { exportMenu.hidden = !exportMenu.hidden; });
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.export-wrap')) exportMenu.hidden = true;
+      if (!e.target.closest('#periodMulti')) {
+        $('#periodMultiMenu').hidden = true;
+        $('#periodMultiBtn').setAttribute('aria-expanded', 'false');
+      }
     });
 
     const exportData = () => visibleRows.map(row => ({
