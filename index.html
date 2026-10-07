@@ -368,6 +368,12 @@
               <option value="year">Año</option>
             </select>
             <input id="searchInput" class="search-input" type="search" maxlength="80" placeholder="Ejemplo: Altamirano o 10456034280" aria-label="Nombre o RUC del locador">
+            <select id="yearSelect" class="search-input" aria-label="Año de la orden de compra" hidden>
+              <option value="">Selecciona un año</option>
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+              <option value="2027">2027</option>
+            </select>
             <button id="searchBtn" class="btn btn-primary" type="submit">Buscar historial</button>
           </div>
           <p id="searchHelp" class="search-help">Escribe al menos tres letras del nombre o los 11 dígitos del RUC.</p>
@@ -444,6 +450,7 @@
     const searchForm = $('#searchForm');
     const searchType = $('#searchType');
     const searchInput = $('#searchInput');
+    const yearSelect = $('#yearSelect');
     const searchHelp = $('#searchHelp');
     const searchBtn = $('#searchBtn');
     const searchMessage = $('#searchMessage');
@@ -570,6 +577,9 @@
 
     $('#clearSearchBtn').addEventListener('click', () => {
       searchInput.value = '';
+      yearSelect.value = '';
+      yearSelect.hidden = true;
+      searchInput.hidden = false;
       searchType.value = 'locador';
       searchInput.placeholder = 'Ejemplo: Altamirano o 10456034280';
       searchInput.setAttribute('aria-label', 'Nombre o RUC del locador');
@@ -594,33 +604,35 @@
 
     searchType.addEventListener('change', () => {
       searchInput.value = '';
+      yearSelect.value = '';
       showMessage(searchMessage);
       if (searchType.value === 'year') {
-        searchInput.placeholder = 'Ejemplo: 2026';
-        searchInput.setAttribute('aria-label', 'Año de la orden de compra');
-        searchInput.inputMode = 'numeric';
-        searchInput.maxLength = 4;
-        searchHelp.textContent = 'Escribe un año de cuatro dígitos, por ejemplo 2026.';
+        searchInput.hidden = true;
+        yearSelect.hidden = false;
+        searchHelp.textContent = 'Selecciona el año que deseas consultar.';
+        yearSelect.focus();
       } else {
+        yearSelect.hidden = true;
+        searchInput.hidden = false;
         searchInput.placeholder = 'Ejemplo: Altamirano o 10456034280';
         searchInput.setAttribute('aria-label', 'Nombre o RUC del locador');
         searchInput.inputMode = 'search';
         searchInput.maxLength = 80;
         searchHelp.textContent = 'Escribe al menos tres letras del nombre o los 11 dígitos del RUC.';
+        searchInput.focus();
       }
-      searchInput.focus();
     });
 
     searchForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       showMessage(searchMessage);
-      const term = searchInput.value.trim().replace(/\s+/g, ' ');
       const mode = searchType.value;
+      const term = mode === 'year' ? yearSelect.value : searchInput.value.trim().replace(/\s+/g, ' ');
       const isRuc = /^\d{11}$/.test(term);
 
       if (mode === 'year') {
-        if (!/^\d{4}$/.test(term) || Number(term) < 2000 || Number(term) > 2100) {
-          showMessage(searchMessage, 'Escribe un año válido de cuatro dígitos, por ejemplo 2026.', 'error');
+        if (!['2025','2026','2027'].includes(term)) {
+          showMessage(searchMessage, 'Selecciona un año para realizar la consulta.', 'error');
           return;
         }
       } else if (!isRuc && term.length < 3) {
