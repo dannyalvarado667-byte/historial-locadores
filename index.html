@@ -361,7 +361,6 @@
           <div class="search-row">
             <input id="searchInput" class="search-input" type="search" maxlength="80" placeholder="Ejemplo: Altamirano o 10456034280" aria-label="Nombre o RUC del locador">
             <button id="searchBtn" class="btn btn-primary" type="submit">Buscar historial</button>
-            <button id="clearSearchBtn" class="btn btn-tool" type="button">Limpiar</button>
           </div>
           <p class="search-help">Escribe al menos tres letras del nombre o los 11 dígitos del RUC.</p>
           <p id="searchMessage" class="message" role="status" aria-live="polite"></p>
@@ -370,7 +369,8 @@
         <div id="resultsTools" class="results-tools" hidden>
           <p id="resultsSummary" class="results-summary"></p>
           <div class="tool-actions">
-        <div class="export-wrap">
+        <button id="clearSearchBtn" class="btn btn-tool" type="button">Limpiar</button>
+            <div class="export-wrap">
               <button id="exportBtn" class="btn btn-tool" type="button">↓ Exportar ▾</button>
               <div id="exportMenu" class="export-menu" hidden>
                 <button type="button" data-export="pdf">PDF</button>
@@ -637,6 +637,7 @@
       currentTerm = term;
       prepareFilters();
       resultsTools.hidden = false;
+      filterPanel.hidden = false;
       drawRows();
     }
 
