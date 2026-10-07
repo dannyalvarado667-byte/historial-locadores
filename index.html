@@ -741,8 +741,22 @@
     });
 
     async function callAdmin(action, payload = {}) {
-      const { data, error } = await supabase.functions.invoke('admin-users', { body: { action, ...payload } });
-      if (error) throw error;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('La sesión expiró. Vuelve a iniciar sesión.');
+
+      const response = await fetch(SUPABASE_URL + '/functions/v1/admin-users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_PUBLISHABLE_KEY,
+          'Authorization': 'Bearer ' + session.access_token
+        },
+        body: JSON.stringify({ action, ...payload })
+      });
+
+      let data = {};
+      try { data = await response.json(); } catch (_) {}
+      if (!response.ok) throw new Error(data?.error || ('Error del servidor (' + response.status + ')'));
       if (data?.error) throw new Error(data.error);
       return data;
     }
