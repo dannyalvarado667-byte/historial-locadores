@@ -402,6 +402,7 @@
                 <th>Monto total</th>
                 <th>Fecha inicio OC</th>
                 <th>Fecha de término OC</th>
+                <th>Plazo de ejecución</th>
                 <th>Área usuaria</th>
                 <th># Entregables</th>
                 <th>Status</th>
@@ -456,6 +457,17 @@
       if (!value) return '—';
       const [year, month, day] = value.split('-').map(Number);
       return new Intl.DateTimeFormat('es-PE').format(new Date(year, month - 1, day));
+    };
+
+    const executionDays = (start, end) => {
+      if (!start || !end) return '—';
+      const [sy, sm, sd] = String(start).slice(0,10).split('-').map(Number);
+      const [ey, em, ed] = String(end).slice(0,10).split('-').map(Number);
+      const startUTC = Date.UTC(sy, sm - 1, sd);
+      const endUTC = Date.UTC(ey, em - 1, ed);
+      if (!Number.isFinite(startUTC) || !Number.isFinite(endUTC) || endUTC < startUTC) return '—';
+      const days = Math.floor((endUTC - startUTC) / 86400000) + 1;
+      return days + (days === 1 ? ' día' : ' días');
     };
 
     const formatMoney = (value) => value == null
@@ -667,6 +679,7 @@
             <td class="mono">${escapeHTML(formatMoney(row.monto_total))}</td>
             <td class="mono">${escapeHTML(formatDate(row.fecha_inicio))}</td>
             <td class="mono">${escapeHTML(formatDate(row.fecha_termino))}</td>
+            <td class="mono">${escapeHTML(executionDays(row.fecha_inicio, row.fecha_termino))}</td>
             <td>${escapeHTML(row.subgerencia || '—')}</td>
             <td>${escapeHTML(row.numero_entregables ?? '—')}</td>
             <td><span class="badge ${exited ? 'badge-exit' : 'badge-active'}">${escapeHTML(row.estado_oc)}</span></td>
