@@ -362,10 +362,14 @@
 
         <form id="searchForm" class="search-card">
           <div class="search-row">
+            <select id="searchType" class="search-input" aria-label="Tipo de búsqueda">
+              <option value="locador">Locador / RUC</option>
+              <option value="year">Año</option>
+            </select>
             <input id="searchInput" class="search-input" type="search" maxlength="80" placeholder="Ejemplo: Altamirano o 10456034280" aria-label="Nombre o RUC del locador">
             <button id="searchBtn" class="btn btn-primary" type="submit">Buscar historial</button>
           </div>
-          <p class="search-help">Escribe al menos tres letras del nombre o los 11 dígitos del RUC.</p>
+          <p id="searchHelp" class="search-help">Escribe al menos tres letras del nombre o los 11 dígitos del RUC.</p>
           <p id="searchMessage" class="message" role="status" aria-live="polite"></p>
         </form>
 
@@ -437,7 +441,9 @@
     const loginBtn = $('#loginBtn');
     const loginMessage = $('#loginMessage');
     const searchForm = $('#searchForm');
+    const searchType = $('#searchType');
     const searchInput = $('#searchInput');
+    const searchHelp = $('#searchHelp');
     const searchBtn = $('#searchBtn');
     const searchMessage = $('#searchMessage');
     const resultsBody = $('#resultsBody');
@@ -561,6 +567,11 @@
 
     $('#clearSearchBtn').addEventListener('click', () => {
       searchInput.value = '';
+      searchType.value = 'locador';
+      searchInput.placeholder = 'Ejemplo: Altamirano o 10456034280';
+      searchInput.setAttribute('aria-label', 'Nombre o RUC del locador');
+      searchInput.inputMode = 'search';
+      searchHelp.textContent = 'Escribe al menos tres letras del nombre o los 11 dígitos del RUC.';
       currentTerm = '';
       allRows = [];
       visibleRows = [];
@@ -578,13 +589,38 @@
       searchInput.focus();
     });
 
+    searchType.addEventListener('change', () => {
+      searchInput.value = '';
+      showMessage(searchMessage);
+      if (searchType.value === 'year') {
+        searchInput.placeholder = 'Ejemplo: 2026';
+        searchInput.setAttribute('aria-label', 'Año de la orden de compra');
+        searchInput.inputMode = 'numeric';
+        searchInput.maxLength = 4;
+        searchHelp.textContent = 'Escribe un año de cuatro dígitos, por ejemplo 2026.';
+      } else {
+        searchInput.placeholder = 'Ejemplo: Altamirano o 10456034280';
+        searchInput.setAttribute('aria-label', 'Nombre o RUC del locador');
+        searchInput.inputMode = 'search';
+        searchInput.maxLength = 80;
+        searchHelp.textContent = 'Escribe al menos tres letras del nombre o los 11 dígitos del RUC.';
+      }
+      searchInput.focus();
+    });
+
     searchForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       showMessage(searchMessage);
       const term = searchInput.value.trim().replace(/\s+/g, ' ');
+      const mode = searchType.value;
       const isRuc = /^\d{11}$/.test(term);
 
-      if (!isRuc && term.length < 3) {
+      if (mode === 'year') {
+        if (!/^\d{4}$/.test(term) || Number(term) < 2000 || Number(term) > 2100) {
+          showMessage(searchMessage, 'Escribe un año válido de cuatro dígitos, por ejemplo 2026.', 'error');
+          return;
+        }
+      } else if (!isRuc && term.length < 3) {
         showMessage(searchMessage, 'Escribe al menos tres letras o un RUC de 11 dígitos.', 'error');
         return;
       }
@@ -595,9 +631,15 @@
         .select('*')
         .order('fecha_inicio', { ascending: false });
 
-      query = isRuc
-        ? query.eq('ruc', term)
-        : query.ilike('apellidos_nombres', `%${term.replace(/[%_]/g, '')}%`);
+      if (mode === 'year') {
+        query = query
+          .gte('fecha_inicio', term + '-01-01')
+          .lte('fecha_inicio', term + '-12-31');
+      } else {
+        query = isRuc
+          ? query.eq('ruc', term)
+          : query.ilike('apellidos_nombres', `%${term.replace(/[%_]/g, '')}%`);
+      }
 
       const { data, error } = await query;
       setBusy(searchBtn, false, 'Buscar historial');
@@ -608,7 +650,7 @@
         return;
       }
 
-      renderResults(data || [], term);
+      renderResults(data || [], mode === 'year' ? 'Año ' + term : term);
     });
 
     function uniqueValues(key) {
