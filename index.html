@@ -96,11 +96,19 @@
     .admin-form { display:grid; grid-template-columns:1.4fr 1.4fr 1fr .8fr auto; gap:10px; align-items:end; padding:16px; border-radius:13px; background:#f6f9fd; }
     .admin-field label { display:block; margin-bottom:6px; font-size:.72rem; font-weight:800; color:#536177; text-transform:uppercase; }
     .admin-field input,.admin-field select { width:100%; min-height:42px; padding:9px 10px; border:1px solid #cdd6e3; border-radius:9px; background:#fff; color:var(--ink); }
-    .admin-table-wrap { margin-top:18px; overflow-x:auto; border:1px solid var(--line); border-radius:13px; }
+    .admin-table-wrap { margin-top:14px; overflow-x:auto; border:1px solid var(--line); border-radius:12px; }
     .admin-table { min-width:780px; }
-    .admin-table td,.admin-table th { font-size:.78rem; }
-    .admin-actions { display:flex; gap:6px; flex-wrap:wrap; }
-    .admin-actions button { min-height:32px; padding:6px 9px; border:1px solid #ccd6e4; border-radius:8px; background:#fff; font-size:.74rem; font-weight:700; }
+    .admin-table th { padding:9px 10px; font-size:.7rem; }
+    .admin-table td { padding:8px 10px; font-size:.76rem; vertical-align:middle; }
+    .admin-table .edit-name { width:100% !important; max-width:260px; min-height:34px; padding:6px 8px !important; }
+    .admin-table .edit-role { min-height:34px; padding:5px 8px !important; }
+    .admin-actions { display:flex; gap:5px; flex-wrap:nowrap; align-items:center; }
+    .admin-actions button { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:31px; padding:5px 8px; border:1px solid #ccd6e4; border-radius:8px; background:#fff; color:var(--navy); font-size:.7rem; font-weight:750; white-space:nowrap; cursor:pointer; }
+    .admin-actions button:hover { background:#f3f7fc; border-color:#aebdd0; }
+    .admin-actions svg { width:14px; height:14px; flex:0 0 14px; }
+    .admin-actions .action-toggle { color:#8a3340; }
+    .admin-actions .action-activate { color:#0d6947; }
+    .admin-actions .action-password { color:#76520b; }
     .role-pill { display:inline-flex; padding:4px 8px; border-radius:999px; background:#eaf2ff; color:#1252a6; font-size:.72rem; font-weight:800; }
     .status-on { color:#0d6947; font-weight:800; } .status-off { color:#9e2433; font-weight:800; }
     .admin-message { margin:12px 0 0; min-height:20px; font-size:.85rem; }
@@ -1117,7 +1125,22 @@
             <td><select class="edit-role" style="padding:7px;border:1px solid #ccd6e4;border-radius:7px"><option value="CONSULTA" ${u.rol==='CONSULTA'?'selected':''}>Consulta</option><option value="ADMINISTRADOR" ${u.rol==='ADMINISTRADOR'?'selected':''}>Administrador</option></select></td>
             <td class="${u.activo?'status-on':'status-off'}">${u.activo?'Activo':'Bloqueado'}</td>
             <td>${escapeHTML(fmtDateTime(u.ultimo_acceso))}</td>
-            <td><div class="admin-actions"><button data-action="save">Guardar</button><button data-action="toggle">${u.activo?'Bloquear':'Activar'}</button><button data-action="password">Contraseña</button></div></td>
+            <td><div class="admin-actions">
+              <button data-action="save" title="Guardar cambios" aria-label="Guardar cambios">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path><path d="M17 21v-8H7v8"></path><path d="M7 3v5h8"></path></svg>
+                <span>Guardar</span>
+              </button>
+              <button data-action="toggle" class="${u.activo?'action-toggle':'action-activate'}" title="${u.activo?'Bloquear usuario':'Activar usuario'}" aria-label="${u.activo?'Bloquear usuario':'Activar usuario'}">
+                ${u.activo
+                  ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 9.5-2"></path></svg>'
+                  : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>'}
+                <span>${u.activo?'Bloquear':'Activar'}</span>
+              </button>
+              <button data-action="password" class="action-password" title="Cambiar contraseña" aria-label="Cambiar contraseña">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"></circle><path d="m11 12 8-8"></path><path d="m18 5 2 2"></path><path d="m15 8 2 2"></path></svg>
+                <span>Contraseña</span>
+              </button>
+            </div></td>
           </tr>`).join('') || '<tr><td colspan="6">No hay usuarios.</td></tr>';
       } catch (e) {
         body.innerHTML = '<tr><td colspan="6">No fue posible cargar los usuarios.</td></tr>';
