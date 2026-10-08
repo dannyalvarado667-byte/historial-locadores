@@ -118,6 +118,12 @@
     .role-pill { display:inline-flex; padding:4px 8px; border-radius:999px; background:#eaf2ff; color:#1252a6; font-size:.72rem; font-weight:800; }
     .status-on { color:#0d6947; font-weight:800; } .status-off { color:#9e2433; font-weight:800; }
     .admin-message { margin:12px 0 0; min-height:20px; font-size:.85rem; }
+    .history-card { width:min(820px,calc(100% - 28px)); }
+    .history-table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:10px; }
+    .history-table { width:100%; min-width:650px; }
+    .history-table th,.history-table td { padding:9px 10px; font-size:.76rem; }
+    .history-empty { padding:24px; text-align:center; color:var(--muted); }
+    .admin-actions .action-history { color:#315c91; }
 
     main { width: min(1500px, calc(100% - 32px)); margin: 0 auto; padding: 42px 0 70px; }
 
@@ -496,6 +502,15 @@
         <div id="detailGrid" class="detail-grid"></div>
       </section>
     </div>
+    <div id="historyOverlay" class="detail-overlay" hidden>
+      <section class="detail-card history-card" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+        <div class="detail-head">
+          <div><h2 id="historyTitle">Historial de accesos</h2><p id="historySubtitle"></p></div>
+          <button id="historyClose" class="detail-close" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <div id="historyContent"></div>
+      </section>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -507,6 +522,9 @@
     const SUPABASE_URL = 'https://acckrmanpgycunpvmfrl.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_2nDjJmqL9oNdWGcpm3MgnQ_KXg5WuBI';
     const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    let currentAccessSessionId = null;
+    let activityHeartbeat = null;
+    let lastActivityWrite = 0;
 
     const $ = (selector) => document.querySelector(selector);
     const loginView = $('#loginView');
@@ -594,6 +612,62 @@
       return true;
     }
 
+    async function startAccessSession(session) {
+      if (!session?.user || currentAccessSessionId) return;
+      const { data, error } = await supabase.from('sesiones_acceso')
+        .insert({ user_id: session.user.id })
+        .select('id').single();
+      if (!error && data?.id) currentAccessSessionId = data.id;
+      if (!activityHeartbeat) activityHeartbeat = setInterval(touchAccessSession, 60000);
+    }
+
+    async function touchAccessSession(force=false) {
+      if (!currentAccessSessionId) return;
+      const now = Date.now();
+      if (!force && now - lastActivityWrite < 60000) return;
+      lastActivityWrite = now;
+      await supabase.from('sesiones_acceso').update({ ultima_actividad: new Date().toISOString() }).eq('id', currentAccessSessionId);
+    }
+
+    async function closeAccessSession(reason='DESCONOCIDO') {
+      if (!currentAccessSessionId) return;
+      const id = currentAccessSessionId;
+      currentAccessSessionId = null;
+      clearInterval(activityHeartbeat); activityHeartbeat = null;
+      const now = new Date().toISOString();
+      const { data } = await supabase.from('sesiones_acceso').select('inicio_sesion').eq('id', id).maybeSingle();
+      const seconds = data?.inicio_sesion ? Math.max(0, Math.round((Date.now()-new Date(data.inicio_sesion).getTime())/1000)) : null;
+      await supabase.from('sesiones_acceso').update({ ultima_actividad: now, fin_sesion: now, duracion_segundos: seconds, motivo_cierre: reason }).eq('id', id);
+    }
+
+    function formatDuration(seconds) {
+      if (seconds === null || seconds === undefined) return 'En curso';
+      const s = Number(seconds), h=Math.floor(s/3600), m=Math.floor((s%3600)/60);
+      if (h) return h+' h '+m+' min';
+      if (m) return m+' min';
+      return s+' s';
+    }
+
+    async function openAccessHistory(userId, name) {
+      $('#historySubtitle').textContent = name;
+      $('#historyContent').innerHTML = '<div class="history-empty">Cargando historial…</div>';
+      $('#historyOverlay').hidden = false;
+      const { data, error } = await supabase.from('sesiones_acceso')
+        .select('inicio_sesion,ultima_actividad,fin_sesion,duracion_segundos,motivo_cierre')
+        .eq('user_id', userId).order('inicio_sesion',{ascending:false}).limit(100);
+      if (error) {
+        $('#historyContent').innerHTML = '<div class="history-empty">No fue posible cargar el historial.</div>';
+        return;
+      }
+      if (!data?.length) {
+        $('#historyContent').innerHTML = '<div class="history-empty">Todavía no hay accesos registrados para este usuario.</div>';
+        return;
+      }
+      $('#historyContent').innerHTML = '<div class="history-table-wrap"><table class="history-table"><thead><tr><th>Ingreso</th><th>Salida / última actividad</th><th>Duración</th><th>Cierre</th></tr></thead><tbody>'+
+        data.map(s => '<tr><td>'+escapeHTML(fmtDateTime(s.inicio_sesion))+'</td><td>'+escapeHTML(fmtDateTime(s.fin_sesion || s.ultima_actividad))+'</td><td>'+escapeHTML(formatDuration(s.duracion_segundos))+'</td><td>'+escapeHTML(s.fin_sesion ? (s.motivo_cierre || '—').replaceAll('_',' ') : 'EN CURSO')+'</td></tr>').join('')+
+        '</tbody></table></div>';
+    }
+
     function showSession(session) {
       const authenticated = Boolean(session?.user);
       loginView.hidden = authenticated;
@@ -620,13 +694,14 @@
       }
 
       setBusy(loginBtn, true, 'Ingresar');
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
       setBusy(loginBtn, false, 'Ingresar');
       if (error) {
         showMessage(loginMessage, 'No fue posible iniciar sesión. Verifica tus datos.', 'error');
         return;
       }
       loginForm.reset();
+      await startAccessSession(signInData?.session);
     });
 
     $('#passwordToggle').addEventListener('click', () => {
@@ -641,6 +716,7 @@
     });
 
     $('#logoutBtn').addEventListener('click', async () => {
+      await closeAccessSession('CIERRE_USUARIO');
       await supabase.auth.signOut();
       resultsBody.innerHTML = '';
       tableWrap.hidden = true;
@@ -896,7 +972,11 @@
     });
     $('#detailClose').addEventListener('click', closeDetail);
     detailOverlay.addEventListener('click', (event) => { if (event.target === detailOverlay) closeDetail(); });
-    document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !detailOverlay.hidden) closeDetail(); });
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      if (!detailOverlay.hidden) closeDetail();
+      if (!$('#historyOverlay').hidden) $('#historyOverlay').hidden = true;
+    });
 
     viewMode.addEventListener('change', drawRows);
 
@@ -1146,6 +1226,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"></circle><path d="m11 12 8-8"></path><path d="m18 5 2 2"></path><path d="m15 8 2 2"></path></svg>
                 <span>Contraseña</span>
               </button>
+              <button data-action="history" class="action-history" title="Ver historial de accesos" aria-label="Ver historial de accesos">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l3 2"></path></svg>
+                <span>Historial</span>
+              </button>
             </div></td>
           </tr>`).join('') || '<tr><td colspan="6">No hay usuarios.</td></tr>';
       } catch (e) {
@@ -1153,6 +1237,9 @@
         $('#adminMessage').textContent = e.message || 'Error';
       }
     }
+
+    $('#historyClose').addEventListener('click', () => { $('#historyOverlay').hidden = true; });
+    $('#historyOverlay').addEventListener('click', e => { if (e.target === $('#historyOverlay')) $('#historyOverlay').hidden = true; });
 
     $('#adminBtn').addEventListener('click', async () => {
       $('#adminPanel').hidden = false;
@@ -1185,6 +1272,10 @@
       const activo=tr.querySelector('.status-on') !== null;
       $('#adminMessage').textContent='';
       try {
+        if(action==='history') {
+          await openAccessHistory(user_id, nombre_completo);
+          return;
+        }
         if(action==='save') await callAdmin('update',{user_id,nombre_completo,rol,activo});
         if(action==='toggle') await callAdmin('update',{user_id,nombre_completo,rol,activo:!activo});
         if(action==='password') {
@@ -1209,6 +1300,7 @@
       clearTimeout(inactivityTimer);
       if (appView.hidden) return;
       inactivityTimer = setTimeout(async () => {
+        await closeAccessSession('INACTIVIDAD');
         await supabase.auth.signOut();
         clearTimeout(inactivityTimer);
         inactivityTimer = null;
@@ -1226,7 +1318,7 @@
     }
 
     ['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach((eventName) => {
-      window.addEventListener(eventName, resetInactivityTimer, { passive: true });
+      window.addEventListener(eventName, () => { resetInactivityTimer(); touchAccessSession(); }, { passive: true });
     });
 
     document.addEventListener('visibilitychange', () => {
@@ -1235,7 +1327,10 @@
 
     const { data: { session } } = await supabase.auth.getSession();
     showSession(session);
-    if (session?.user) resetInactivityTimer();
+    if (session?.user) {
+      await startAccessSession(session);
+      resetInactivityTimer();
+    }
 
     supabase.auth.onAuthStateChange((_event, currentSession) => {
       showSession(currentSession);
