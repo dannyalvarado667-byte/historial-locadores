@@ -124,6 +124,13 @@
     .history-table th,.history-table td { padding:9px 10px; font-size:.76rem; }
     .history-empty { padding:24px; text-align:center; color:var(--muted); }
     .admin-actions .action-history { color:#315c91; }
+    .admin-actions .action-columns { color:#5b4a91; }
+    .columns-card { width:min(720px,calc(100% - 28px)); }
+    .columns-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:8px; }
+    .column-check { display:flex; align-items:center; gap:8px; padding:10px; border:1px solid var(--line); border-radius:9px; font-size:.8rem; }
+    .column-check input { width:16px; height:16px; }
+    .columns-actions { display:flex; justify-content:flex-end; margin-top:16px; }
+    @media(max-width:700px){.columns-grid{grid-template-columns:1fr 1fr;}}
 
     main { width: min(1500px, calc(100% - 32px)); margin: 0 auto; padding: 42px 0 70px; }
 
@@ -502,6 +509,14 @@
         <div id="detailGrid" class="detail-grid"></div>
       </section>
     </div>
+    <div id="columnsOverlay" class="detail-overlay" hidden>
+      <section class="detail-card columns-card" role="dialog" aria-modal="true" aria-labelledby="columnsTitle">
+        <div class="detail-head"><div><h2 id="columnsTitle">Columnas visibles</h2><p id="columnsSubtitle"></p></div><button id="columnsClose" class="detail-close" type="button" aria-label="Cerrar">×</button></div>
+        <div id="columnsGrid" class="columns-grid"></div>
+        <div class="columns-actions"><button id="saveColumns" class="btn btn-primary" type="button">Guardar columnas</button></div>
+        <p id="columnsMessage" class="message"></p>
+      </section>
+    </div>
     <div id="historyOverlay" class="detail-overlay" hidden>
       <section class="detail-card history-card" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
         <div class="detail-head">
@@ -557,6 +572,14 @@
     let currentTerm = '';
     let currentSearchMode = 'locador';
     let selectedPeriods = new Set();
+    const columnDefs = [
+      ['ver_nombre','Apellidos y nombres'],['ver_ruc','RUC'],['ver_oc','N.° OC'],['ver_expediente','Expediente SGD'],
+      ['ver_monto','Monto total'],['ver_fecha_inicio','Fecha inicio OC'],['ver_fecha_termino','Fecha de término OC'],
+      ['ver_plazo','Plazo de ejecución en días'],['ver_area','Área usuaria'],['ver_entregables','# Entregables'],
+      ['ver_status','Status'],['ver_credito','Crédito presupuestal']
+    ];
+    let currentColumns = Object.fromEntries(columnDefs.map(([k])=>[k,true]));
+    let columnsTargetUser = null;
 
     const escapeHTML = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
@@ -602,12 +625,15 @@
       const adminBtn = $('#adminBtn');
       adminBtn.hidden = true;
       if (!session?.user) return false;
-      const { data: profile, error } = await supabase.from('app_users').select('rol,activo,nombre_completo').eq('user_id', session.user.id).maybeSingle();
+      const { data: profile, error } = await supabase.from('app_users').select('rol,activo,nombre_completo,app_user_columns(ver_nombre,ver_ruc,ver_oc,ver_expediente,ver_monto,ver_fecha_inicio,ver_fecha_termino,ver_plazo,ver_area,ver_entregables,ver_status,ver_credito)').eq('user_id', session.user.id).maybeSingle();
       if (error || !profile?.activo) {
         await supabase.auth.signOut();
         showMessage(loginMessage, 'Tu usuario no está autorizado o se encuentra bloqueado.', 'error');
         return false;
       }
+      const ownCols = Array.isArray(profile.app_user_columns) ? profile.app_user_columns[0] : profile.app_user_columns;
+      if (ownCols) currentColumns = { ...currentColumns, ...ownCols };
+      applyColumnVisibility();
       adminBtn.hidden = profile.rol !== 'ADMINISTRADOR';
       return true;
     }
@@ -891,6 +917,24 @@
       drawRows();
     }
 
+    function visibleColumnDefs() { return columnDefs.filter(([k]) => currentColumns[k] !== false); }
+    function applyColumnVisibility() {
+      document.querySelectorAll('[data-col-key]').forEach(el => { el.hidden = currentColumns[el.dataset.colKey] === false; });
+    }
+    function rowCells(row) {
+      const vals = {
+        ver_nombre:'<td class="person"><button class="person-link" type="button" data-detail-index="'+visibleRows.indexOf(row)+'">'+escapeHTML(row.apellidos_nombres)+'</button></td>',
+        ver_ruc:'<td class="mono">'+escapeHTML(row.ruc)+'</td>', ver_oc:'<td class="mono">'+escapeHTML(row.numero_oc)+'</td>',
+        ver_expediente:'<td class="mono">'+escapeHTML(row.expediente||'—')+'</td>', ver_monto:'<td class="mono">'+escapeHTML(formatMoney(row.monto_total))+'</td>',
+        ver_fecha_inicio:'<td class="mono">'+escapeHTML(formatDate(row.fecha_inicio))+'</td>', ver_fecha_termino:'<td class="mono">'+escapeHTML(formatDate(row.fecha_termino))+'</td>',
+        ver_plazo:'<td class="mono">'+escapeHTML(executionDays(row.fecha_inicio,row.fecha_termino))+'</td>', ver_area:'<td>'+escapeHTML(row.subgerencia||'—')+'</td>',
+        ver_entregables:'<td>'+escapeHTML(row.numero_entregables??'—')+'</td>',
+        ver_status:'<td><span class="badge '+((row.estado_oc==='DESISTIÓ'||row.estado_oc==='ANULADO')?'badge-exit':'badge-active')+'">'+escapeHTML(displayStatus(row.estado_oc))+'</span></td>',
+        ver_credito:'<td>'+escapeHTML(row.periodo||'—')+'</td>'
+      };
+      return visibleColumnDefs().map(([k])=>vals[k]).join('');
+    }
+
     function renderResults(rows, term) {
       allRows = rows;
       visibleRows = rows;
@@ -921,21 +965,7 @@
       const rowHtml = (row) => {
         const exited = row.estado_oc === 'DESISTIÓ' || row.estado_oc === 'ANULADO';
         const index = visibleRows.indexOf(row);
-        return `
-          <tr>
-            <td class="person"><button class="person-link" type="button" data-detail-index="${index}">${escapeHTML(row.apellidos_nombres)}</button></td>
-            <td class="mono">${escapeHTML(row.ruc)}</td>
-            <td class="mono">${escapeHTML(row.numero_oc)}</td>
-            <td class="mono">${escapeHTML(row.expediente || '—')}</td>
-            <td class="mono">${escapeHTML(formatMoney(row.monto_total))}</td>
-            <td class="mono">${escapeHTML(formatDate(row.fecha_inicio))}</td>
-            <td class="mono">${escapeHTML(formatDate(row.fecha_termino))}</td>
-            <td class="mono">${escapeHTML(executionDays(row.fecha_inicio, row.fecha_termino))}</td>
-            <td>${escapeHTML(row.subgerencia || '—')}</td>
-            <td>${escapeHTML(row.numero_entregables ?? '—')}</td>
-            <td><span class="badge ${exited ? 'badge-exit' : 'badge-active'}">${escapeHTML(displayStatus(row.estado_oc))}</span></td>
-            <td>${escapeHTML(row.periodo || '—')}</td>
-          </tr>`;
+        return '<tr>'+rowCells(row)+'</tr>';
       };
 
       if (currentSearchMode === 'year' && viewMode.value === 'group') {
@@ -950,7 +980,7 @@
         );
         resultsBody.innerHTML = ordered.map(rows => {
           const first = rows[0];
-          return `<tr class="group-row"><td colspan="12"><div class="group-title">${escapeHTML(first.apellidos_nombres || 'Sin nombre')} <span class="group-meta">RUC ${escapeHTML(first.ruc || '—')} · ${rows.length} orden${rows.length === 1 ? '' : 'es'} de compra</span></div></td></tr>` +
+          return `<tr class="group-row"><td colspan="${visibleColumnDefs().length}"><div class="group-title">${escapeHTML(first.apellidos_nombres || 'Sin nombre')} <span class="group-meta">RUC ${escapeHTML(first.ruc || '—')} · ${rows.length} orden${rows.length === 1 ? '' : 'es'} de compra</span></div></td></tr>` +
             rows.map(rowHtml).join('');
         }).join('');
       } else {
@@ -975,7 +1005,8 @@
         ['Crédito presupuestal', row.periodo]
       ];
       detailSubtitle.textContent = 'OC N.° ' + (row.numero_oc || '—');
-      detailGrid.innerHTML = items.map(([label,value]) =>
+      const allowedLabels = new Set(visibleColumnDefs().map(([,label])=>label));
+      detailGrid.innerHTML = items.filter(([label])=>allowedLabels.has(label)).map(([label,value]) =>
         '<div class="detail-item"><span>' + escapeHTML(label) + '</span><strong>' + escapeHTML(value ?? '—') + '</strong></div>'
       ).join('');
       detailOverlay.hidden = false;
@@ -1046,20 +1077,16 @@
       }
     });
 
-    const exportData = () => visibleRows.map(row => ({
-      'Apellidos y nombres': row.apellidos_nombres ?? '',
-      'RUC': row.ruc ?? '',
-      'N.° OC': row.numero_oc ?? '',
-      'Expediente SGD': row.expediente ?? '',
-      'Monto total': Number(row.monto_total ?? 0),
-      'Fecha inicio OC': formatDate(row.fecha_inicio),
-      'Fecha de término OC': formatDate(row.fecha_termino),
-      'Plazo de ejecución en días': executionDaysNumber(row.fecha_inicio, row.fecha_termino),
-      'Área usuaria': row.subgerencia ?? '',
-      '# Entregables': row.numero_entregables ?? '',
-      'Status': displayStatus(row.estado_oc),
-      'Crédito presupuestal': row.periodo ?? ''
-    }));
+    const exportData = () => visibleRows.map(row => {
+      const values = {
+        ver_nombre: row.apellidos_nombres ?? '', ver_ruc: row.ruc ?? '', ver_oc: row.numero_oc ?? '',
+        ver_expediente: row.expediente ?? '', ver_monto: Number(row.monto_total ?? 0),
+        ver_fecha_inicio: formatDate(row.fecha_inicio), ver_fecha_termino: formatDate(row.fecha_termino),
+        ver_plazo: executionDaysNumber(row.fecha_inicio,row.fecha_termino), ver_area: row.subgerencia ?? '',
+        ver_entregables: row.numero_entregables ?? '', ver_status: displayStatus(row.estado_oc), ver_credito: row.periodo ?? ''
+      };
+      return Object.fromEntries(visibleColumnDefs().map(([k,label])=>[label,values[k]]));
+    });
 
     function downloadBlob(blob, filename) {
       const a = document.createElement('a');
@@ -1253,6 +1280,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l3 2"></path></svg>
                 <span>Historial</span>
               </button>
+              <button data-action="columns" class="action-columns" title="Configurar columnas visibles" aria-label="Configurar columnas visibles">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16M15 4v16"></path></svg>
+                <span>Columnas</span>
+              </button>
             </div></td>
           </tr>`).join('') || '<tr><td colspan="6">No hay usuarios.</td></tr>';
       } catch (e) {
@@ -1260,6 +1291,16 @@
         $('#adminMessage').textContent = e.message || 'Error';
       }
     }
+
+    $('#columnsClose').addEventListener('click',()=>{$('#columnsOverlay').hidden=true;});
+    $('#columnsOverlay').addEventListener('click',e=>{if(e.target===$('#columnsOverlay')) $('#columnsOverlay').hidden=true;});
+    $('#saveColumns').addEventListener('click',async()=>{
+      if(!columnsTargetUser) return;
+      const payload={user_id:columnsTargetUser.user_id};
+      columnDefs.forEach(([k])=>payload[k]=Boolean($('#columnsGrid').querySelector('[data-column-key="'+k+'"]')?.checked));
+      try{ await callAdmin('columns',payload); $('#columnsMessage').textContent='Columnas actualizadas.'; $('#columnsMessage').className='message success'; }
+      catch(e){ $('#columnsMessage').textContent=e.message||'No se pudo guardar.'; $('#columnsMessage').className='message error'; }
+    });
 
     $('#historyClose').addEventListener('click', () => { $('#historyOverlay').hidden = true; });
     $('#historyOverlay').addEventListener('click', e => { if (e.target === $('#historyOverlay')) $('#historyOverlay').hidden = true; });
@@ -1297,6 +1338,19 @@
       try {
         if(action==='history') {
           await openAccessHistory(user_id, nombre_completo);
+          return;
+        }
+        if(action==='columns') {
+          const data = await callAdmin('list');
+          const user = (data.users||[]).find(x=>x.user_id===user_id);
+          const cols = Array.isArray(user?.app_user_columns) ? user.app_user_columns[0] : user?.app_user_columns;
+          columnsTargetUser = { user_id, nombre_completo, cols: cols || {} };
+          $('#columnsSubtitle').textContent = nombre_completo;
+          $('#columnsGrid').innerHTML = columnDefs.map(([key,label]) =>
+            '<label class="column-check"><input type="checkbox" data-column-key="'+key+'" '+(columnsTargetUser.cols[key]!==false?'checked':'')+'> <span>'+escapeHTML(label)+'</span></label>'
+          ).join('');
+          $('#columnsMessage').textContent='';
+          $('#columnsOverlay').hidden=false;
           return;
         }
         if(action==='save') await callAdmin('update',{user_id,nombre_completo,rol,activo});
