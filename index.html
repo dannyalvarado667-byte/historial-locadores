@@ -614,11 +614,34 @@
 
     async function startAccessSession(session) {
       if (!session?.user || currentAccessSessionId) return;
-      const { data, error } = await supabase.from('sesiones_acceso')
-        .insert({ user_id: session.user.id })
-        .select('id').single();
-      if (!error && data?.id) currentAccessSessionId = data.id;
+
+      // Reutiliza una sesión abierta al recargar la página. Si existieran
+      // sesiones antiguas huérfanas, las cierra usando su última actividad.
+      const { data: openSessions } = await supabase.from('sesiones_acceso')
+        .select('id,inicio_sesion,ultima_actividad')
+        .eq('user_id', session.user.id)
+        .is('fin_sesion', null)
+        .order('inicio_sesion', { ascending:false });
+
+      if (openSessions?.length) {
+        const [latest, ...orphans] = openSessions;
+        currentAccessSessionId = latest.id;
+        for (const oldSession of orphans) {
+          const end = oldSession.ultima_actividad || oldSession.inicio_sesion;
+          const seconds = Math.max(0, Math.round((new Date(end).getTime()-new Date(oldSession.inicio_sesion).getTime())/1000));
+          await supabase.from('sesiones_acceso').update({
+            fin_sesion:end, duracion_segundos:seconds, motivo_cierre:'CAMBIO_SESION'
+          }).eq('id', oldSession.id);
+        }
+      } else {
+        const { data, error } = await supabase.from('sesiones_acceso')
+          .insert({ user_id: session.user.id })
+          .select('id').single();
+        if (!error && data?.id) currentAccessSessionId = data.id;
+      }
+
       if (!activityHeartbeat) activityHeartbeat = setInterval(touchAccessSession, 60000);
+      await touchAccessSession(true);
     }
 
     async function touchAccessSession(force=false) {
