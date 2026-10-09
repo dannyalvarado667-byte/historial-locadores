@@ -126,6 +126,7 @@
     .admin-actions .action-history { color:#315c91; }
     .admin-actions .action-columns { color:#5b4a91; }
     th[hidden], td[hidden], [data-col-key][hidden] { display:none !important; }
+    [data-filter-col][hidden] { display:none !important; }
     .columns-card { width:min(720px,calc(100% - 28px)); }
     .columns-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:8px; }
     .column-check { display:flex; align-items:center; gap:8px; padding:10px; border:1px solid var(--line); border-radius:9px; font-size:.8rem; }
@@ -464,16 +465,16 @@
         </div>
         <div id="filterPanel" class="filter-panel" hidden>
           <div class="filter-grid">
-            <div class="filter-field"><label>Crédito presupuestal</label>
+            <div class="filter-field" data-filter-col="ver_credito"><label>Crédito presupuestal</label>
               <div id="periodMulti" class="multi-select">
                 <button id="periodMultiBtn" class="multi-select-btn" type="button" aria-expanded="false">Todos <span>▾</span></button>
                 <div id="periodMultiMenu" class="multi-select-menu" hidden></div>
               </div>
             </div>
-            <div class="filter-field"><label for="filterArea">Área usuaria</label><select id="filterArea"><option value="">Todas</option></select></div>
-            <div class="filter-field"><label for="filterStatus">Status</label><select id="filterStatus"><option value="">Todas</option></select></div>
-            <div class="filter-field"><label for="filterDeliverables">Entregables</label><select id="filterDeliverables"><option value="">Todos</option></select></div>
-            <div class="filter-field"><label for="filterOc">N.° OC</label><input id="filterOc" type="text" inputmode="numeric" placeholder="Filtrar OC"></div>
+            <div class="filter-field" data-filter-col="ver_area"><label for="filterArea">Área usuaria</label><select id="filterArea"><option value="">Todas</option></select></div>
+            <div class="filter-field" data-filter-col="ver_status"><label for="filterStatus">Status</label><select id="filterStatus"><option value="">Todas</option></select></div>
+            <div class="filter-field" data-filter-col="ver_entregables"><label for="filterDeliverables">Entregables</label><select id="filterDeliverables"><option value="">Todos</option></select></div>
+            <div class="filter-field" data-filter-col="ver_oc"><label for="filterOc">N.° OC</label><input id="filterOc" type="text" inputmode="numeric" placeholder="Filtrar OC"></div>
           </div>
           <div class="filter-footer"><button id="clearFilters" class="btn btn-tool" type="button">Limpiar filtros</button></div>
         </div>
@@ -904,12 +905,12 @@
     }
 
     function applyFilters() {
-      const area = $('#filterArea').value;
-      const status = $('#filterStatus').value;
-      const deliverables = $('#filterDeliverables').value;
-      const oc = $('#filterOc').value.trim();
+      const area = currentColumns.ver_area === false ? '' : $('#filterArea').value;
+      const status = currentColumns.ver_status === false ? '' : $('#filterStatus').value;
+      const deliverables = currentColumns.ver_entregables === false ? '' : $('#filterDeliverables').value;
+      const oc = currentColumns.ver_oc === false ? '' : $('#filterOc').value.trim();
       visibleRows = allRows.filter(row =>
-        (selectedPeriods.size === 0 || selectedPeriods.has(String(row.periodo ?? ''))) &&
+        (currentColumns.ver_credito === false || selectedPeriods.size === 0 || selectedPeriods.has(String(row.periodo ?? ''))) &&
         (!area || String(row.subgerencia ?? '') === area) &&
         (!status || String(row.estado_oc ?? '') === status) &&
         (!deliverables || String(row.numero_entregables ?? '') === deliverables) &&
@@ -921,6 +922,21 @@
     function visibleColumnDefs() { return columnDefs.filter(([k]) => currentColumns[k] !== false); }
     function applyColumnVisibility() {
       document.querySelectorAll('[data-col-key]').forEach(el => { el.hidden = currentColumns[el.dataset.colKey] === false; });
+      document.querySelectorAll('[data-filter-col]').forEach(el => {
+        const denied = currentColumns[el.dataset.filterCol] === false;
+        el.hidden = denied;
+        if (!denied) return;
+        if (el.dataset.filterCol === 'ver_credito') {
+          selectedPeriods.clear();
+          const all = $('#periodMultiMenu')?.querySelector('[data-period-all]');
+          if (all) all.checked = true;
+          $('#periodMultiMenu')?.querySelectorAll('[data-period-value]').forEach(cb => cb.checked=false);
+          updatePeriodButton?.();
+        } else {
+          const control = el.querySelector('select,input');
+          if (control) control.value = '';
+        }
+      });
     }
     function rowCells(row) {
       const vals = {
@@ -1122,7 +1138,7 @@
         const byOc = new Map(visibleRows.map((row,i) => [String(row.numero_oc ?? '') + '|' + i, data[i]]));
         groupedExportSets().forEach(rows => {
           const first = rows[0];
-          lines.push(quote((first.apellidos_nombres || 'Sin nombre') + ' · RUC ' + (first.ruc || '—') + ' · ' + rows.length + ' OC'));
+          lines.push(quote((currentColumns.ver_nombre !== false ? (first.apellidos_nombres || 'Sin nombre') : 'Locador') + (currentColumns.ver_ruc !== false ? ' · RUC ' + (first.ruc || '—') : '') + ' · ' + rows.length + ' OC'));
           rows.forEach(row => {
             const idx = visibleRows.indexOf(row);
             const item = data[idx];
@@ -1244,7 +1260,7 @@
           const first = rows[0];
           doc.setFontSize(9);
           doc.setFont(undefined, 'bold');
-          doc.text((first.apellidos_nombres || 'Sin nombre') + ' · RUC ' + (first.ruc || '—') + ' · ' + rows.length + ' OC', 10, y);
+          doc.text((currentColumns.ver_nombre !== false ? (first.apellidos_nombres || 'Sin nombre') : 'Locador') + (currentColumns.ver_ruc !== false ? ' · RUC ' + (first.ruc || '—') : '') + ' · ' + rows.length + ' OC', 10, y);
           doc.setFont(undefined, 'normal');
           const body = rows.map(row => {
             const item = data[visibleRows.indexOf(row)];
