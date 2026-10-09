@@ -463,10 +463,13 @@
         </div>
         <div id="filterPanel" class="filter-panel" hidden>
           <div class="filter-grid">
-            <div class="filter-field" id="viewModeField" hidden><label for="viewMode">Agrupar</label>
+            <div class="filter-field" id="viewModeField" hidden><label for="viewMode">Agrupar por</label>
               <select id="viewMode" aria-label="Agrupar resultados">
-                <option value="list">Lista completa</option>
-                <option value="group">Por locador</option>
+                <option value="list">Sin agrupar</option>
+                <option value="locador">Locador</option>
+                <option value="ruc">RUC</option>
+                <option value="monto">Monto</option>
+                <option value="area">Área usuaria</option>
               </select>
             </div>
             <div class="filter-field" data-filter-col="ver_credito"><label>Crédito presupuestal</label>
@@ -939,6 +942,7 @@
 
     function visibleColumnDefs() { return columnDefs.filter(([k]) => currentColumns[k] !== false); }
     function applyColumnVisibility() {
+      syncGroupingOptions();
       document.querySelectorAll('[data-col-key]').forEach(el => { el.hidden = currentColumns[el.dataset.colKey] === false; });
       document.querySelectorAll('[data-filter-col]').forEach(el => {
         const denied = currentColumns[el.dataset.filterCol] === false;
@@ -983,6 +987,47 @@
       drawRows();
     }
 
+    function groupingConfig() {
+      const configs = {
+        locador: { permission:'ver_nombre', key:r=>String(r.apellidos_nombres || ''), label:r=>r.apellidos_nombres || 'Sin nombre', sort:r=>String(r.apellidos_nombres || '') },
+        ruc: { permission:'ver_ruc', key:r=>String(r.ruc || ''), label:r=>'RUC ' + (r.ruc || '—'), sort:r=>String(r.ruc || '') },
+        monto: { permission:'ver_monto', key:r=>String(Number(r.monto_total ?? 0)), label:r=>'Monto ' + formatMoney(r.monto_total), sort:r=>Number(r.monto_total ?? 0) },
+        area: { permission:'ver_area', key:r=>String(r.subgerencia || ''), label:r=>'Área ' + (r.subgerencia || '—'), sort:r=>String(r.subgerencia || '') }
+      };
+      return configs[viewMode.value] || null;
+    }
+
+    function syncGroupingOptions() {
+      const permissions = {locador:'ver_nombre',ruc:'ver_ruc',monto:'ver_monto',area:'ver_area'};
+      [...viewMode.options].forEach(opt => {
+        if (opt.value === 'list') { opt.hidden=false; opt.disabled=false; return; }
+        const denied = currentColumns[permissions[opt.value]] === false;
+        opt.hidden = denied;
+        opt.disabled = denied;
+      });
+      if (viewMode.selectedOptions[0]?.disabled) viewMode.value='list';
+    }
+
+    function groupedExportSets() {
+      const cfg = groupingConfig();
+      if (!cfg) return [];
+      const groups = new Map();
+      visibleRows.forEach(row => {
+        const key = cfg.key(row);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(row);
+      });
+      return [...groups.values()].sort((a,b) => {
+        const av=cfg.sort(a[0]), bv=cfg.sort(b[0]);
+        return typeof av === 'number' && typeof bv === 'number' ? av-bv : String(av).localeCompare(String(bv),'es',{numeric:true});
+      });
+    }
+
+    function groupHeading(rows) {
+      const cfg=groupingConfig(), first=rows[0];
+      return (cfg ? cfg.label(first) : 'Grupo') + ' · ' + rows.length + (rows.length===1 ? ' orden de compra' : ' órdenes de compra');
+    }
+
     function drawRows() {
       resultCount.textContent = String(visibleRows.length);
       const filtered = visibleRows.length !== allRows.length;
@@ -1004,21 +1049,12 @@
         return '<tr>'+rowCells(row)+'</tr>';
       };
 
-      if (currentSearchMode === 'year' && viewMode.value === 'group') {
-        const groups = new Map();
-        visibleRows.forEach(row => {
-          const key = String(row.ruc || row.apellidos_nombres || '');
-          if (!groups.has(key)) groups.set(key, []);
-          groups.get(key).push(row);
-        });
-        const ordered = [...groups.values()].sort((a,b) =>
-          String(a[0]?.apellidos_nombres || '').localeCompare(String(b[0]?.apellidos_nombres || ''), 'es')
-        );
-        resultsBody.innerHTML = ordered.map(rows => {
-          const first = rows[0];
-          return `<tr class="group-row"><td colspan="${visibleColumnDefs().length}"><div class="group-title">${escapeHTML(first.apellidos_nombres || 'Sin nombre')} <span class="group-meta">RUC ${escapeHTML(first.ruc || '—')} · ${rows.length} orden${rows.length === 1 ? '' : 'es'} de compra</span></div></td></tr>` +
-            rows.map(rowHtml).join('');
-        }).join('');
+      if (currentSearchMode === 'year' && viewMode.value !== 'list') {
+        const ordered = groupedExportSets();
+        resultsBody.innerHTML = ordered.map(rows =>
+          `<tr class="group-row"><td colspan="${visibleColumnDefs().length}"><div class="group-title">${escapeHTML(groupHeading(rows))}</div></td></tr>` +
+          rows.map(rowHtml).join('')
+        ).join('');
       } else {
         resultsBody.innerHTML = visibleRows.map(rowHtml).join('');
       }
@@ -1134,18 +1170,6 @@
       setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     }
 
-    function groupedExportSets() {
-      const groups = new Map();
-      visibleRows.forEach(row => {
-        const key = String(row.ruc || row.apellidos_nombres || '');
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key).push(row);
-      });
-      return [...groups.values()].sort((a,b) =>
-        String(a[0]?.apellidos_nombres || '').localeCompare(String(b[0]?.apellidos_nombres || ''), 'es')
-      );
-    }
-
     function exportCSV() {
       const data = exportData();
       if (!data.length) return;
@@ -1153,11 +1177,10 @@
       const quote = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
       let lines = [headers.map(quote).join(';')];
 
-      if (currentSearchMode === 'year' && viewMode.value === 'group') {
+      if (currentSearchMode === 'year' && viewMode.value !== 'list') {
         const byOc = new Map(visibleRows.map((row,i) => [String(row.numero_oc ?? '') + '|' + i, data[i]]));
         groupedExportSets().forEach(rows => {
-          const first = rows[0];
-          lines.push(quote((currentColumns.ver_nombre !== false ? (first.apellidos_nombres || 'Sin nombre') : 'Locador') + (currentColumns.ver_ruc !== false ? ' · RUC ' + (first.ruc || '—') : '') + ' · ' + rows.length + ' OC'));
+          lines.push(quote(groupHeading(rows)));
           rows.forEach(row => {
             const idx = visibleRows.indexOf(row);
             const item = data[idx];
@@ -1176,7 +1199,7 @@
       const data = exportData();
       if (!data.length) return;
       const headers = Object.keys(data[0]);
-      const grouped = currentSearchMode === 'year' && viewMode.value === 'group';
+      const grouped = currentSearchMode === 'year' && viewMode.value !== 'list';
       const title = 'HISTORIAL DE ÓRDENES DE COMPRA';
       const meta = 'Consulta: ' + currentTerm + '   |   Registros: ' + visibleRows.length + '   |   Generado: ' + new Date().toLocaleString('es-PE');
       let aoa = [[title],[meta],[],headers];
@@ -1187,13 +1210,8 @@
 
       if (grouped) {
         groupedExportSets().forEach(rows => {
-          const first = rows[0];
           const groupRow = aoa.length;
-          const parts = [];
-          if (currentColumns.ver_nombre !== false) parts.push(first.apellidos_nombres || 'Sin nombre');
-          if (currentColumns.ver_ruc !== false) parts.push('RUC ' + (first.ruc || '—'));
-          parts.push(rows.length + (rows.length === 1 ? ' orden de compra' : ' órdenes de compra'));
-          aoa.push([parts.join('   |   ')]);
+          aoa.push([groupHeading(rows)]);
           merges.push({s:{r:groupRow,c:0},e:{r:groupRow,c:Math.max(0,headers.length-1)}});
           rows.forEach(row => {
             const item = data[visibleRows.indexOf(row)];
@@ -1250,7 +1268,7 @@
       doc.text('Consulta: ' + currentTerm + ' · Registros: ' + visibleRows.length + ' · Generado: ' + new Date().toLocaleString('es-PE'), 14, 21);
       const headers = Object.keys(data[0]);
 
-      if (currentSearchMode === 'year' && viewMode.value === 'group') {
+      if (currentSearchMode === 'year' && viewMode.value !== 'list') {
         let y = 27;
         groupedExportSets().forEach((rows, groupIndex) => {
           if (y > 180) { doc.addPage(); y = 15; }
