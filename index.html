@@ -354,7 +354,7 @@
       </div>
       <div id="sessionArea" class="session-area" hidden>
         <span id="userEmail" class="user-email"></span>
-        <button id="adminBtn" class="btn btn-admin" type="button" hidden>⚙ Usuarios</button>
+        <button id="syncBtn" class="btn btn-admin" type="button" hidden>🔄 Actualizar datos</button>\n        <button id="adminBtn" class="btn btn-admin" type="button" hidden>⚙ Usuarios</button>
         <button id="logoutBtn" class="btn btn-ghost" type="button">Cerrar sesión</button>
       </div>
     </header>
@@ -813,7 +813,7 @@
         resetSearchState();
         currentColumns = Object.fromEntries(columnDefs.map(([k])=>[k,true]));
         $('#adminPanel').hidden = true;
-        $('#adminBtn').hidden = true;
+        $('#adminBtn').hidden = true;\n        $('#syncBtn').hidden = true;
       }
     }
 
@@ -1425,6 +1425,26 @@
 
     $('#historyClose').addEventListener('click', () => { $('#historyOverlay').hidden = true; });
     $('#historyOverlay').addEventListener('click', e => { if (e.target === $('#historyOverlay')) $('#historyOverlay').hidden = true; });
+
+    $('#syncBtn').addEventListener('click', async () => {
+      const btn = $('#syncBtn');
+      if (!confirm('Se revisarán las fuentes de Airtable y se actualizará Supabase. ¿Continuar?')) return;
+      const original = '🔄 Actualizar datos';
+      setBusy(btn, true, original);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) throw new Error('La sesión expiró.');
+        const response = await fetch(SUPABASE_URL + '/functions/v1/sync-airtable', {
+          method:'POST',
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token}
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error(data.error || 'No se pudo actualizar.');
+        alert('Actualización completada.\n\nRegistros revisados: '+data.read+'\nNuevas OC: '+data.created+'\nOC actualizadas: '+data.updated+'\nSin cambios: '+data.unchanged+'\nErrores: '+data.errors);
+        resetSearchState();
+      } catch (e) { alert('No se pudo completar la actualización: '+(e.message || e)); }
+      finally { setBusy(btn, false, original); }
+    });
 
     $('#adminBtn').addEventListener('click', async () => {
       $('#adminPanel').hidden = false;
