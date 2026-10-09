@@ -798,6 +798,8 @@
       detailOverlay.hidden = true;
     }
 
+    let renderedUserId = null;
+
     function showSession(session) {
       const authenticated = Boolean(session?.user);
       loginView.hidden = authenticated;
@@ -805,8 +807,13 @@
       sessionArea.hidden = !authenticated;
       $('#userEmail').textContent = session?.user?.email || '';
       if (authenticated) {
-        resetSearchState();
-        currentColumns = Object.fromEntries(columnDefs.map(([k])=>[k,true]));
+        const incomingUserId = session.user.id;
+        const isNewUserSession = renderedUserId !== incomingUserId;
+        if (isNewUserSession) {
+          resetSearchState();
+          currentColumns = Object.fromEntries(columnDefs.map(([k])=>[k,true]));
+          renderedUserId = incomingUserId;
+        }
         refreshAccess(session).then(ok => {
           if (ok) {
             applyColumnVisibility();
@@ -814,6 +821,7 @@
           }
         });
       } else {
+        renderedUserId = null;
         resetSearchState();
         currentColumns = Object.fromEntries(columnDefs.map(([k])=>[k,true]));
         $('#adminPanel').hidden = true;
