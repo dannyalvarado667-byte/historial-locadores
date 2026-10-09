@@ -123,6 +123,10 @@
     .history-table { width:100%; min-width:650px; }
     .history-table th,.history-table td { padding:9px 10px; font-size:.76rem; }
     .history-empty { padding:24px; text-align:center; color:var(--muted); }
+    .history-pagination { display:flex; align-items:center; justify-content:center; gap:10px; padding:14px 8px 2px; }
+    .history-pagination button { min-width:92px; min-height:34px; padding:6px 12px; border:1px solid #ccd6e4; border-radius:8px; background:#fff; color:var(--navy); font-weight:750; cursor:pointer; }
+    .history-pagination button:disabled { opacity:.42; cursor:default; }
+    .history-page-info { min-width:110px; text-align:center; color:var(--muted); font-size:.8rem; font-weight:700; }
     .admin-actions .action-history { color:#315c91; }
     .admin-actions .action-columns { color:#5b4a91; }
     th[hidden], td[hidden], [data-col-key][hidden] { display:none !important; }
@@ -706,10 +710,28 @@
       return s+' s';
     }
 
+    const HISTORY_PAGE_SIZE = 15;
+    let historyRows = [];
+    let historyPage = 1;
+
+    function renderAccessHistoryPage() {
+      const totalPages = Math.max(1, Math.ceil(historyRows.length / HISTORY_PAGE_SIZE));
+      historyPage = Math.min(Math.max(1, historyPage), totalPages);
+      const start = (historyPage - 1) * HISTORY_PAGE_SIZE;
+      const pageRows = historyRows.slice(start, start + HISTORY_PAGE_SIZE);
+      $('#historyContent').innerHTML =
+        '<div class="history-table-wrap"><table class="history-table"><thead><tr><th>Ingreso</th><th>Salida / última actividad</th><th>Duración</th><th>Cierre</th></tr></thead><tbody>'+
+        pageRows.map(s => '<tr><td>'+escapeHTML(fmtDateTime(s.inicio_sesion))+'</td><td>'+escapeHTML(fmtDateTime(s.fin_sesion || s.ultima_actividad))+'</td><td>'+escapeHTML(formatDuration(s.duracion_segundos))+'</td><td>'+escapeHTML(s.fin_sesion ? (s.motivo_cierre || '—').replaceAll('_',' ') : 'EN CURSO')+'</td></tr>').join('')+
+        '</tbody></table></div>'+
+        (totalPages > 1 ? '<div class="history-pagination"><button type="button" data-history-page="prev" '+(historyPage===1?'disabled':'')+'>← Anterior</button><span class="history-page-info">Página '+historyPage+' de '+totalPages+'</span><button type="button" data-history-page="next" '+(historyPage===totalPages?'disabled':'')+'>Siguiente →</button></div>' : '');
+    }
+
     async function openAccessHistory(userId, name) {
       $('#historySubtitle').textContent = name;
       $('#historyContent').innerHTML = '<div class="history-empty">Cargando historial…</div>';
       $('#historyOverlay').hidden = false;
+      historyRows = [];
+      historyPage = 1;
       const { data, error } = await supabase.from('sesiones_acceso')
         .select('inicio_sesion,ultima_actividad,fin_sesion,duracion_segundos,motivo_cierre')
         .eq('user_id', userId).order('inicio_sesion',{ascending:false}).limit(100);
@@ -721,10 +743,17 @@
         $('#historyContent').innerHTML = '<div class="history-empty">Todavía no hay accesos registrados para este usuario.</div>';
         return;
       }
-      $('#historyContent').innerHTML = '<div class="history-table-wrap"><table class="history-table"><thead><tr><th>Ingreso</th><th>Salida / última actividad</th><th>Duración</th><th>Cierre</th></tr></thead><tbody>'+
-        data.map(s => '<tr><td>'+escapeHTML(fmtDateTime(s.inicio_sesion))+'</td><td>'+escapeHTML(fmtDateTime(s.fin_sesion || s.ultima_actividad))+'</td><td>'+escapeHTML(formatDuration(s.duracion_segundos))+'</td><td>'+escapeHTML(s.fin_sesion ? (s.motivo_cierre || '—').replaceAll('_',' ') : 'EN CURSO')+'</td></tr>').join('')+
-        '</tbody></table></div>';
+      historyRows = data;
+      renderAccessHistoryPage();
     }
+
+    $('#historyContent').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-history-page]');
+      if (!button) return;
+      if (button.dataset.historyPage === 'prev') historyPage--;
+      if (button.dataset.historyPage === 'next') historyPage++;
+      renderAccessHistoryPage();
+    });
 
     function resetSearchState() {
       searchInput.value = '';
