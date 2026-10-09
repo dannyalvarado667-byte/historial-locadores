@@ -1298,7 +1298,12 @@
       if(!columnsTargetUser) return;
       const payload={user_id:columnsTargetUser.user_id};
       columnDefs.forEach(([k])=>payload[k]=Boolean($('#columnsGrid').querySelector('[data-column-key="'+k+'"]')?.checked));
-      try{ await callAdmin('columns',payload); $('#columnsMessage').textContent='Columnas actualizadas.'; $('#columnsMessage').className='message success'; }
+      try{
+        await callAdmin('columns',payload);
+        $('#columnsMessage').textContent='Columnas actualizadas.';
+        $('#columnsMessage').className='message success';
+        setTimeout(()=>{ $('#columnsOverlay').hidden=true; $('#columnsMessage').textContent=''; },450);
+      }
       catch(e){ $('#columnsMessage').textContent=e.message||'No se pudo guardar.'; $('#columnsMessage').className='message error'; }
     });
 
