@@ -125,6 +125,7 @@
     .history-empty { padding:24px; text-align:center; color:var(--muted); }
     .admin-actions .action-history { color:#315c91; }
     .admin-actions .action-columns { color:#5b4a91; }
+    th[hidden], td[hidden], [data-col-key][hidden] { display:none !important; }
     .columns-card { width:min(720px,calc(100% - 28px)); }
     .columns-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:8px; }
     .column-check { display:flex; align-items:center; gap:8px; padding:10px; border:1px solid var(--line); border-radius:9px; font-size:.8rem; }
@@ -481,18 +482,18 @@
           <table>
             <thead>
               <tr>
-                <th>Apellidos y nombres</th>
-                <th>RUC</th>
-                <th>N.° OC</th>
-                <th>Expediente SGD</th>
-                <th>Monto total</th>
-                <th>Fecha inicio OC</th>
-                <th>Fecha de término OC</th>
-                <th>Plazo de ejecución en días</th>
-                <th>Área usuaria</th>
-                <th># Entregables</th>
-                <th>Status</th>
-                <th>Crédito presupuestal</th>
+                <th data-col-key="ver_nombre">Apellidos y nombres</th>
+                <th data-col-key="ver_ruc">RUC</th>
+                <th data-col-key="ver_oc">N.° OC</th>
+                <th data-col-key="ver_expediente">Expediente SGD</th>
+                <th data-col-key="ver_monto">Monto total</th>
+                <th data-col-key="ver_fecha_inicio">Fecha inicio OC</th>
+                <th data-col-key="ver_fecha_termino">Fecha de término OC</th>
+                <th data-col-key="ver_plazo">Plazo de ejecución en días</th>
+                <th data-col-key="ver_area">Área usuaria</th>
+                <th data-col-key="ver_entregables"># Entregables</th>
+                <th data-col-key="ver_status">Status</th>
+                <th data-col-key="ver_credito">Crédito presupuestal</th>
               </tr>
             </thead>
             <tbody id="resultsBody"></tbody>
