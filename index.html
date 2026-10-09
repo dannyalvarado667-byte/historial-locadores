@@ -529,7 +529,7 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
   <script type="module">
@@ -1141,31 +1141,86 @@
       const data = exportData();
       if (!data.length) return;
       const headers = Object.keys(data[0]);
-      let ws;
+      const grouped = currentSearchMode === 'year' && viewMode.value === 'group';
+      let aoa = [], groupRows = [];
 
-      if (currentSearchMode === 'year' && viewMode.value === 'group') {
-        const aoa = [headers];
+      if (grouped) {
+        aoa.push(headers);
         groupedExportSets().forEach(rows => {
           const first = rows[0];
-          aoa.push([(first.apellidos_nombres || 'Sin nombre') + ' · RUC ' + (first.ruc || '—') + ' · ' + rows.length + ' OC']);
+          groupRows.push(aoa.length);
+          aoa.push([(first.apellidos_nombres || 'Sin nombre') + (currentColumns.ver_ruc !== false ? ' · RUC ' + (first.ruc || '—') : '') + ' · ' + rows.length + (rows.length === 1 ? ' OC' : ' OC')]);
           rows.forEach(row => {
             const item = data[visibleRows.indexOf(row)];
             aoa.push(headers.map(h => item[h]));
           });
           aoa.push([]);
         });
-        ws = XLSX.utils.aoa_to_sheet(aoa);
-        ws['!merges'] = [];
-        let excelRow = 1;
-        groupedExportSets().forEach(rows => {
-          ws['!merges'].push({s:{r:excelRow,c:0},e:{r:excelRow,c:headers.length-1}});
-          excelRow += rows.length + 2;
-        });
       } else {
-        ws = XLSX.utils.json_to_sheet(data);
+        aoa = [headers, ...data.map(item => headers.map(h => item[h]))];
       }
 
-      ws['!cols'] = [{wch:34},{wch:14},{wch:14},{wch:22},{wch:14},{wch:16},{wch:18},{wch:22},{wch:16},{wch:14},{wch:18},{wch:20}];
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      if (grouped) {
+        ws['!merges'] = groupRows.map(r => ({s:{r,c:0},e:{r,c:headers.length-1}}));
+      }
+
+      const headerStyle = {
+        font:{bold:true,color:{rgb:'FFFFFF'}},
+        fill:{fgColor:{rgb:'17365D'}},
+        alignment:{horizontal:'center',vertical:'center',wrapText:true},
+        border:{bottom:{style:'thin',color:{rgb:'B8C6D9'}}}
+      };
+      const groupStyle = {
+        font:{bold:true,color:{rgb:'17365D'}},
+        fill:{fgColor:{rgb:'DCE6F1'}},
+        alignment:{vertical:'center'}
+      };
+      const bodyStyle = {
+        alignment:{vertical:'center',wrapText:false},
+        border:{bottom:{style:'hair',color:{rgb:'D9E2F0'}}}
+      };
+
+      headers.forEach((_,ci) => {
+        const cell=ws[XLSX.utils.encode_cell({r:0,c:ci})];
+        if(cell) cell.s=headerStyle;
+      });
+      groupRows.forEach(r => {
+        const cell=ws[XLSX.utils.encode_cell({r,c:0})];
+        if(cell) cell.s=groupStyle;
+      });
+
+      const range=XLSX.utils.decode_range(ws['!ref']);
+      for(let r=1;r<=range.e.r;r++){
+        if(groupRows.includes(r)) continue;
+        for(let ci=0;ci<=range.e.c;ci++){
+          const cell=ws[XLSX.utils.encode_cell({r,c:ci})];
+          if(cell) cell.s=bodyStyle;
+        }
+      }
+
+      const widths = {
+        'Apellidos y nombres':34,'RUC':14,'N.° OC':15,'Expediente SGD':22,'Monto total':15,
+        'Fecha inicio OC':16,'Fecha de término OC':18,'Plazo de ejecución en días':18,
+        'Área usuaria':16,'# Entregables':13,'Status':18,'Crédito presupuestal':20
+      };
+      ws['!cols'] = headers.map(h => ({wch:widths[h] || 16}));
+      ws['!rows'] = [{hpt:30}];
+      groupRows.forEach(r => { ws['!rows'][r]={hpt:22}; });
+      ws['!autofilter'] = grouped ? undefined : {ref:XLSX.utils.encode_range({r:0,c:0},{r:range.e.r,c:range.e.c})};
+      ws['!freeze'] = {xSplit:0,ySplit:1,topLeftCell:'A2',activePane:'bottomLeft',state:'frozen'};
+
+      // Formatos numéricos conservando valores útiles para cálculos.
+      headers.forEach((h,ci) => {
+        for(let r=1;r<=range.e.r;r++){
+          if(groupRows.includes(r)) continue;
+          const cell=ws[XLSX.utils.encode_cell({r,c:ci})];
+          if(!cell) continue;
+          if(h==='Monto total' && typeof cell.v==='number') cell.z='S/ #,##0.00';
+          if(h==='Plazo de ejecución en días' && typeof cell.v==='number') cell.z='0';
+        }
+      });
+
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Historial');
       XLSX.writeFile(wb, 'historial_locadores.xlsx');
