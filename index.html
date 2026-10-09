@@ -1223,8 +1223,9 @@
       ws['!cols'] = headers.map(h => ({wch:widths[h] || 16}));
       ws['!rows'] = [{hpt:30}];
       groupRows.forEach(r => { ws['!rows'][r]={hpt:22}; });
-      ws['!autofilter'] = grouped ? undefined : {ref:XLSX.utils.encode_range({r:0,c:0},{r:range.e.r,c:range.e.c})};
-      ws['!freeze'] = {xSplit:0,ySplit:1,topLeftCell:'A2',activePane:'bottomLeft',state:'frozen'};
+      if (!grouped) {
+        ws['!autofilter'] = {ref:XLSX.utils.encode_range({r:0,c:0},{r:range.e.r,c:range.e.c})};
+      }
 
       // Formatos numéricos conservando valores útiles para cálculos.
       headers.forEach((h,ci) => {
@@ -1239,7 +1240,7 @@
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Historial');
-      XLSX.writeFile(wb, 'historial_locadores.xlsx');
+      XLSX.writeFile(wb, 'historial_locadores.xlsx', {bookType:'xlsx', compression:true, cellStyles:true});
     }
 
     function exportPDF() {
