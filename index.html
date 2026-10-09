@@ -745,7 +745,14 @@
       resultsSummary.textContent = '';
       emptyState.textContent = 'Realiza una búsqueda para visualizar el historial.';
       emptyState.hidden = false;
-      resetFilters();
+      $('#filterArea').innerHTML = '<option value="">Todas</option>';
+      $('#filterStatus').innerHTML = '<option value="">Todas</option>';
+      $('#filterDeliverables').innerHTML = '<option value="">Todos</option>';
+      $('#filterOc').value = '';
+      $('#periodMultiMenu').innerHTML = '';
+      $('#periodMultiBtn').firstChild.textContent = 'Todos ';
+      $('#periodMultiBtn').setAttribute('aria-expanded', 'false');
+      $('#periodMultiMenu').hidden = true;
       searchMessage.textContent = '';
       detailOverlay.hidden = true;
     }
