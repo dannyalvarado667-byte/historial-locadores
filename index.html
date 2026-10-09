@@ -1441,20 +1441,32 @@
 
     $('#syncBtn').addEventListener('click', async () => {
       const btn = $('#syncBtn');
-      if (!confirm('Se revisarán las fuentes de Airtable y se actualizará Supabase. ¿Continuar?')) return;
+      const sources = [
+        ['app1ve88dxVZgRry1','Junio–Julio 2026'],
+        ['appmYEZKzPm3uzPBK','Agosto 2026'],
+        ['appigb0d3AZnlpmvm','Setiembre 2026']
+      ];
+      const choice = prompt('¿Qué base deseas actualizar?\n\n1 = Junio–Julio 2026\n2 = Agosto 2026\n3 = Setiembre 2026\n4 = Todas\n\nEscribe 1, 2, 3 o 4:','1');
+      if (choice === null) return;
+      const n = Number(choice);
+      if (![1,2,3,4].includes(n)) { alert('Selecciona 1, 2, 3 o 4.'); return; }
+      const selected = n === 4 ? sources : [sources[n-1]];
       const original = '🔄 Actualizar datos';
-      setBusy(btn, true, original);
+      setBusy(btn, true, 'Actualizando…');
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) throw new Error('La sesión expiró.');
         const response = await fetch(SUPABASE_URL + '/functions/v1/sync-airtable', {
           method:'POST',
-          headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token}
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token},
+          body: JSON.stringify({base_ids:selected.map(x=>x[0])})
         });
         const data = await response.json();
         if (!response.ok || !data.ok) throw new Error(data.error || 'No se pudo actualizar.');
-        alert('Actualización completada.\n\nRegistros revisados: '+data.read+'\nNuevas OC: '+data.created+'\nOC actualizadas: '+data.updated+'\nSin cambios: '+data.unchanged+'\nErrores: '+data.errors);
-        resetSearchState();
+        let msg='Actualización completada.\n\n'+data.details.map(x=>x.fuente+'\nRevisados: '+x.leidos+' | Nuevos: '+x.nuevos+' | Actualizados: '+x.actualizados+' | Sin cambios: '+x.sin_cambios+' | Errores: '+x.errores).join('\n\n');
+        if (data.diagnostics?.length) msg += '\n\nDIAGNÓSTICO:\n'+data.diagnostics.map(x=>x.error).join('\n');
+        alert(msg);
+        if (data.created || data.updated) resetSearchState();
       } catch (e) { alert('No se pudo completar la actualización: '+(e.message || e)); }
       finally { setBusy(btn, false, original); }
     });
