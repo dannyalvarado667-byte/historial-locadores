@@ -636,7 +636,9 @@
 
     async function refreshAccess(session) {
       const adminBtn = $('#adminBtn');
+      const syncBtn = $('#syncBtn');
       adminBtn.hidden = true;
+      syncBtn.hidden = true;
       if (!session?.user) return false;
       const { data: profile, error } = await supabase.from('app_users').select('rol,activo,nombre_completo,app_user_columns(ver_nombre,ver_ruc,ver_oc,ver_expediente,ver_monto,ver_fecha_inicio,ver_fecha_termino,ver_plazo,ver_area,ver_entregables,ver_status,ver_credito)').eq('user_id', session.user.id).maybeSingle();
       if (error || !profile?.activo) {
@@ -648,6 +650,7 @@
       if (ownCols) currentColumns = { ...currentColumns, ...ownCols };
       applyColumnVisibility();
       adminBtn.hidden = profile.rol !== 'ADMINISTRADOR';
+      syncBtn.hidden = profile.rol !== 'ADMINISTRADOR';
       return true;
     }
 
