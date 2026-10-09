@@ -354,7 +354,8 @@
       </div>
       <div id="sessionArea" class="session-area" hidden>
         <span id="userEmail" class="user-email"></span>
-        <button id="syncBtn" class="btn btn-admin" type="button" hidden>🔄 Actualizar datos</button>\n        <button id="adminBtn" class="btn btn-admin" type="button" hidden>⚙ Usuarios</button>
+        <button id="syncBtn" class="btn btn-admin" type="button" hidden>🔄 Actualizar datos</button>
+        <button id="adminBtn" class="btn btn-admin" type="button" hidden>⚙ Usuarios</button>
         <button id="logoutBtn" class="btn btn-ghost" type="button">Cerrar sesión</button>
       </div>
     </header>
@@ -816,7 +817,8 @@
         resetSearchState();
         currentColumns = Object.fromEntries(columnDefs.map(([k])=>[k,true]));
         $('#adminPanel').hidden = true;
-        $('#adminBtn').hidden = true;\n        $('#syncBtn').hidden = true;
+        $('#adminBtn').hidden = true;
+        $('#syncBtn').hidden = true;
       }
     }
 
