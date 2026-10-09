@@ -448,10 +448,6 @@
         <div id="resultsTools" class="results-tools" hidden>
           <p id="resultsSummary" class="results-summary"></p>
           <div class="tool-actions">
-            <select id="viewMode" class="btn btn-tool" aria-label="Vista de resultados" hidden>
-              <option value="list">Lista completa</option>
-              <option value="group">Agrupar por locador</option>
-            </select>
         <button id="clearSearchBtn" class="btn btn-tool" type="button">Limpiar</button>
             <div class="export-wrap">
               <button id="exportBtn" class="btn btn-tool" type="button">↓ Exportar ▾</button>
@@ -465,6 +461,12 @@
         </div>
         <div id="filterPanel" class="filter-panel" hidden>
           <div class="filter-grid">
+            <div class="filter-field" id="viewModeField" hidden><label for="viewMode">Agrupar</label>
+              <select id="viewMode" aria-label="Agrupar resultados">
+                <option value="list">Lista completa</option>
+                <option value="group">Por locador</option>
+              </select>
+            </div>
             <div class="filter-field" data-filter-col="ver_credito"><label>Crédito presupuestal</label>
               <div id="periodMulti" class="multi-select">
                 <button id="periodMultiBtn" class="multi-select-btn" type="button" aria-expanded="false">Todos <span>▾</span></button>
@@ -734,6 +736,7 @@
       selectedPeriods.clear();
       viewMode.value = 'list';
       viewMode.hidden = true;
+      $('#viewModeField').hidden = true;
       allRows = [];
       visibleRows = [];
       resultsBody.innerHTML = '';
@@ -973,6 +976,7 @@
       resultsTools.hidden = false;
       filterPanel.hidden = false;
       viewMode.hidden = currentSearchMode !== 'year';
+      $('#viewModeField').hidden = currentSearchMode !== 'year';
       if (currentSearchMode !== 'year') viewMode.value = 'list';
       drawRows();
     }
