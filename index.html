@@ -217,8 +217,10 @@
     .btn-tool:hover { background:#f3f7fc; }
     .filter-panel { margin:0 0 14px; padding:18px; border:1px solid var(--line); border-radius:14px; background:#fff; box-shadow:0 8px 24px rgba(23,54,93,.05); }
     .filter-grid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px; }
+    .filter-grid > .filter-field { min-width:0; }
     .filter-field label { display:block; margin-bottom:6px; color:#536177; font-size:.72rem; font-weight:800; text-transform:uppercase; }
-    .filter-field select, .filter-field input { width:100%; min-height:40px; padding:8px 10px; border:1px solid #cdd6e3; border-radius:9px; background:#fff; color:var(--ink); }
+    @media (min-width: 1101px) { .filter-oc-field { grid-column:6; grid-row:1; } }
+        .filter-field select, .filter-field input { width:100%; min-height:40px; padding:8px 10px; border:1px solid #cdd6e3; border-radius:9px; background:#fff; color:var(--ink); }
     .multi-select { position:relative; }
     .multi-select-btn { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-height:40px; padding:8px 10px; border:1px solid #cdd6e3; border-radius:9px; background:#fff; color:var(--ink); text-align:left; }
     .multi-select-menu { position:absolute; left:0; right:0; top:calc(100% + 5px); z-index:40; max-height:240px; overflow:auto; padding:7px; border:1px solid #cdd6e3; border-radius:10px; background:#fff; box-shadow:0 12px 30px rgba(23,54,93,.18); }
@@ -476,7 +478,7 @@
             <div class="filter-field" data-filter-col="ver_area"><label for="filterArea">Área usuaria</label><select id="filterArea"><option value="">Todas</option></select></div>
             <div class="filter-field" data-filter-col="ver_status"><label for="filterStatus">Status</label><select id="filterStatus"><option value="">Todas</option></select></div>
             <div class="filter-field" data-filter-col="ver_entregables"><label for="filterDeliverables">Entregables</label><select id="filterDeliverables"><option value="">Todos</option></select></div>
-            <div class="filter-field" data-filter-col="ver_oc"><label for="filterOc">N.° OC</label><input id="filterOc" type="text" inputmode="numeric" placeholder="Filtrar OC"></div>
+            <div class="filter-field filter-oc-field" data-filter-col="ver_oc"><label for="filterOc">N.° OC</label><input id="filterOc" type="text" inputmode="numeric" placeholder="Filtrar OC"></div>
           </div>
           <div class="filter-footer"><button id="clearFilters" class="btn btn-tool" type="button">Limpiar filtros</button></div>
         </div>
