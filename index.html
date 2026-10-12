@@ -1547,7 +1547,7 @@
             processed+=Number(d.leidos||0);if(!d.leidos&&processed<total)throw new Error('La sincronización no pudo continuar.');
             const baseFraction=total?Math.min(processed/total,1):1,overall=((i+baseFraction)/ids.length)*100;
             bar.style.width=overall.toFixed(1)+'%';pct.textContent=Math.round(overall)+'%';detail.textContent=Math.min(processed,total)+' de '+total+' registros revisados';
-            await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+            await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(resolve,220))));
             if(processed>=total)results.push({fuente:d.fuente||sourceLabel,...totals});
           }
         }
