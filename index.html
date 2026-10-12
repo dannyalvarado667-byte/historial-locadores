@@ -353,6 +353,8 @@
     .sync-actions-top{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);margin-bottom:4px}.sync-actions-top button{border:0;background:transparent;color:var(--blue);font-weight:700}
     .sync-list{max-height:330px;overflow:auto}.sync-source{display:flex;gap:12px;align-items:flex-start;padding:14px 6px;border-bottom:1px solid var(--line);cursor:pointer}.sync-source input{margin-top:4px;transform:scale(1.15)}.sync-source strong{display:block;color:var(--ink)}.sync-source small{display:block;color:var(--muted);margin-top:3px}
     .sync-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}.sync-status{margin:14px 0 0;color:var(--muted);white-space:pre-line}.sync-status.success{color:var(--green)}.sync-status.error{color:var(--red)}
+
+    .sync-progress{margin:16px 0 4px}.sync-progress[hidden]{display:none}.sync-progress-head{display:flex;justify-content:space-between;gap:12px;font-size:.88rem;font-weight:700;color:var(--navy);margin-bottom:7px}.sync-progress-track{height:12px;background:#e7eef8;border-radius:999px;overflow:hidden}.sync-progress-bar{height:100%;width:0;background:var(--blue);border-radius:999px;transition:width .25s ease}.sync-progress-detail{margin-top:6px;font-size:.82rem;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -533,7 +535,7 @@
         <div class="sync-head"><div><h2 id="syncTitle">Actualizar datos</h2><p>Selecciona una o varias bases de Airtable para sincronizar con Supabase.</p></div><button id="syncClose" class="sync-close" type="button" aria-label="Cerrar">×</button></div>
         <div class="sync-actions-top"><strong>Bases disponibles</strong><button id="syncToggleAll" type="button">Seleccionar todas</button></div>
         <div id="syncSources" class="sync-list"></div>
-        <p id="syncStatus" class="sync-status" role="status"></p>
+        <div id="syncProgress" class="sync-progress" hidden><div class="sync-progress-head"><span id="syncProgressLabel">Preparando…</span><span id="syncProgressPct">0%</span></div><div class="sync-progress-track"><div id="syncProgressBar" class="sync-progress-bar"></div></div><div id="syncProgressDetail" class="sync-progress-detail"></div></div><p id="syncStatus" class="sync-status" role="status"></p>
         <div class="sync-footer"><button id="syncCancel" class="btn btn-tool" type="button">Cancelar</button><button id="syncRun" class="btn btn-primary" type="button">🔄 Actualizar seleccionadas</button></div>
       </section>
     </div>
@@ -1525,10 +1527,29 @@
       setBusy(btn,true,'Actualizando…'); $('#syncClose').disabled=true; $('#syncCancel').disabled=true; syncStatus.textContent='Sincronizando '+ids.length+(ids.length===1?' base…':' bases…');syncStatus.className='sync-status';
       try{
         const {data:{session}}=await supabase.auth.getSession();if(!session?.access_token)throw new Error('La sesión expiró.');
-        const response=await fetch(SUPABASE_URL+'/functions/v1/sync-airtable',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({base_ids:ids})});
-        const data=await response.json();if(!response.ok||!data.ok)throw new Error(data.error||'No se pudo actualizar.');
-        syncStatus.textContent='Actualización completada.\n\n'+data.details.map(x=>x.fuente+'\nRevisados: '+x.leidos+' · Nuevos: '+x.nuevos+' · Actualizados: '+x.actualizados+' · Sin cambios: '+x.sin_cambios+' · Errores: '+x.errores).join('\n\n');
-        syncStatus.className='sync-status success';if(data.created||data.updated)resetSearchState();
+        const progress=$('#syncProgress'),bar=$('#syncProgressBar'),pct=$('#syncProgressPct'),label=$('#syncProgressLabel'),detail=$('#syncProgressDetail');
+        progress.hidden=false;bar.style.width='0%';pct.textContent='0%';syncStatus.textContent='';
+        const totals={leidos:0,nuevos:0,actualizados:0,sin_cambios:0,errores:0},results=[];
+        for(let i=0;i<ids.length;i++){
+          const sourceBox=syncSources.querySelector('input[value="'+CSS.escape(ids[i])+'"]');
+          const sourceLabel=sourceBox?.closest('.sync-source')?.querySelector('strong')?.textContent||('Base '+(i+1));
+          label.textContent='Base '+(i+1)+' de '+ids.length+' · '+sourceLabel; detail.textContent='Consultando registros…';
+          const countResp=await fetch(SUPABASE_URL+'/functions/v1/sync-airtable',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({base_ids:[ids[i]],mode:'count'})});
+          const countData=await countResp.json();if(!countResp.ok||!countData.ok)throw new Error(countData.error||'No se pudo contar la base.');
+          const total=Number(countData.total||0),chunk=20;let processed=0;
+          while(processed<total){
+            const response=await fetch(SUPABASE_URL+'/functions/v1/sync-airtable',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({base_ids:[ids[i]],mode:'chunk',offset:processed,limit:chunk})});
+            const data=await response.json();if(!response.ok||!data.ok)throw new Error(data.error||'No se pudo actualizar.');
+            const d=data.details?.[0]||{};for(const k of Object.keys(totals))totals[k]+=Number(d[k]??0);
+            processed+=Number(d.leidos||0);if(!d.leidos&&processed<total)throw new Error('La sincronización no pudo continuar.');
+            const baseFraction=total?Math.min(processed/total,1):1,overall=((i+baseFraction)/ids.length)*100;
+            bar.style.width=overall.toFixed(1)+'%';pct.textContent=Math.round(overall)+'%';detail.textContent=Math.min(processed,total)+' de '+total+' registros revisados';
+            if(processed>=total)results.push({fuente:d.fuente||sourceLabel,...totals});
+          }
+        }
+        bar.style.width='100%';pct.textContent='100%';label.textContent='Actualización completada';detail.textContent='Todos los registros seleccionados fueron revisados.';
+        syncStatus.textContent='Actualización completada.\n\nRevisados: '+totals.leidos+' · Nuevos: '+totals.nuevos+' · Actualizados: '+totals.actualizados+' · Sin cambios: '+totals.sin_cambios+' · Errores: '+totals.errores;
+        syncStatus.className='sync-status success';if(totals.nuevos||totals.actualizados)resetSearchState();
       }catch(e){syncStatus.textContent='No se pudo completar la actualización: '+(e.message||e);syncStatus.className='sync-status error'}
       finally{setBusy(btn,false,'🔄 Actualizar seleccionadas');$('#syncClose').disabled=false;$('#syncCancel').disabled=false}
     });
