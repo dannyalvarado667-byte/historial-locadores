@@ -345,6 +345,14 @@
     #tableWrap thead th.sortable::after { content:' ↕'; opacity:.62; font-size:1.55em; font-weight:800; line-height:.7; margin-left:5px; vertical-align:-2px; }
     #tableWrap thead th.sortable[data-sort-dir="asc"]::after { content:' ▲'; opacity:1; font-size:1.35em; }
     #tableWrap thead th.sortable[data-sort-dir="desc"]::after { content:' ▼'; opacity:1; font-size:1.35em; }
+
+    .sync-overlay{position:fixed;inset:0;background:rgba(10,30,55,.48);display:grid;place-items:center;padding:20px;z-index:1000}
+    .sync-card{width:min(620px,100%);background:#fff;border-radius:18px;box-shadow:var(--shadow);padding:24px}
+    .sync-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:18px}.sync-head h2{margin:0 0 5px;color:var(--navy)}.sync-head p{margin:0;color:var(--muted)}
+    .sync-close{border:0;background:transparent;font-size:1.5rem;color:var(--muted)}
+    .sync-actions-top{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);margin-bottom:4px}.sync-actions-top button{border:0;background:transparent;color:var(--blue);font-weight:700}
+    .sync-list{max-height:330px;overflow:auto}.sync-source{display:flex;gap:12px;align-items:flex-start;padding:14px 6px;border-bottom:1px solid var(--line);cursor:pointer}.sync-source input{margin-top:4px;transform:scale(1.15)}.sync-source strong{display:block;color:var(--ink)}.sync-source small{display:block;color:var(--muted);margin-top:3px}
+    .sync-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}.sync-status{margin:14px 0 0;color:var(--muted);white-space:pre-line}.sync-status.success{color:var(--green)}.sync-status.error{color:var(--red)}
 </style>
 </head>
 <body>
@@ -519,6 +527,16 @@
         </div>
       </section>
     </main>
+
+    <div id="syncOverlay" class="sync-overlay" hidden>
+      <section class="sync-card" role="dialog" aria-modal="true" aria-labelledby="syncTitle">
+        <div class="sync-head"><div><h2 id="syncTitle">Actualizar datos</h2><p>Selecciona una o varias bases de Airtable para sincronizar con Supabase.</p></div><button id="syncClose" class="sync-close" type="button" aria-label="Cerrar">×</button></div>
+        <div class="sync-actions-top"><strong>Bases disponibles</strong><button id="syncToggleAll" type="button">Seleccionar todas</button></div>
+        <div id="syncSources" class="sync-list"></div>
+        <p id="syncStatus" class="sync-status" role="status"></p>
+        <div class="sync-footer"><button id="syncCancel" class="btn btn-tool" type="button">Cancelar</button><button id="syncRun" class="btn btn-primary" type="button">🔄 Actualizar seleccionadas</button></div>
+      </section>
+    </div>
     <div id="detailOverlay" class="detail-overlay" hidden>
       <section class="detail-card" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
         <div class="detail-head">
@@ -1487,36 +1505,32 @@
     $('#historyClose').addEventListener('click', () => { $('#historyOverlay').hidden = true; });
     $('#historyOverlay').addEventListener('click', e => { if (e.target === $('#historyOverlay')) $('#historyOverlay').hidden = true; });
 
-    $('#syncBtn').addEventListener('click', async () => {
-      const btn = $('#syncBtn');
-      const sources = [
-        ['app1ve88dxVZgRry1','Junio–Julio 2026'],
-        ['appmYEZKzPm3uzPBK','Agosto 2026'],
-        ['appigb0d3AZnlpmvm','Setiembre 2026']
-      ];
-      const choice = prompt('¿Qué base deseas actualizar?\n\n1 = Junio–Julio 2026\n2 = Agosto 2026\n3 = Setiembre 2026\n4 = Todas\n\nEscribe 1, 2, 3 o 4:','1');
-      if (choice === null) return;
-      const n = Number(choice);
-      if (![1,2,3,4].includes(n)) { alert('Selecciona 1, 2, 3 o 4.'); return; }
-      const selected = n === 4 ? sources : [sources[n-1]];
-      const original = '🔄 Actualizar datos';
-      setBusy(btn, true, 'Actualizando…');
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) throw new Error('La sesión expiró.');
-        const response = await fetch(SUPABASE_URL + '/functions/v1/sync-airtable', {
-          method:'POST',
-          headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token},
-          body: JSON.stringify({base_ids:selected.map(x=>x[0])})
-        });
-        const data = await response.json();
-        if (!response.ok || !data.ok) throw new Error(data.error || 'No se pudo actualizar.');
-        let msg='Actualización completada.\n\n'+data.details.map(x=>x.fuente+'\nRevisados: '+x.leidos+' | Nuevos: '+x.nuevos+' | Actualizados: '+x.actualizados+' | Sin cambios: '+x.sin_cambios+' | Errores: '+x.errores).join('\n\n');
-        if (data.diagnostics?.length) msg += '\n\nDIAGNÓSTICO:\n'+data.diagnostics.map(x=>x.error).join('\n');
-        alert(msg);
-        if (data.created || data.updated) resetSearchState();
-      } catch (e) { alert('No se pudo completar la actualización: '+(e.message || e)); }
-      finally { setBusy(btn, false, original); }
+    const syncOverlay=$('#syncOverlay'), syncSources=$('#syncSources'), syncStatus=$('#syncStatus');
+    async function loadSyncSources(){
+      syncStatus.textContent='Cargando bases disponibles…'; syncStatus.className='sync-status';
+      const {data,error}=await supabase.from('airtable_sync_sources').select('id,nombre,base_id,tabla,periodo,activo,ultima_sincronizacion').eq('activo',true).order('id');
+      if(error) throw error;
+      syncSources.innerHTML=(data||[]).map(x=>'<label class="sync-source"><input type="checkbox" value="'+escapeHTML(x.base_id)+'"><span><strong>'+escapeHTML(x.periodo||x.nombre)+'</strong><small>'+escapeHTML(x.nombre)+' · '+escapeHTML(x.tabla||'DATOS_OC')+'</small></span></label>').join('');
+      syncStatus.textContent=data?.length?'':'No hay bases activas configuradas.';
+      $('#syncToggleAll').textContent='Seleccionar todas';
+    }
+    function closeSyncModal(){ if(!$('#syncRun').disabled) syncOverlay.hidden=true; }
+    $('#syncBtn').addEventListener('click',async()=>{syncOverlay.hidden=false;try{await loadSyncSources()}catch(e){syncStatus.textContent='No se pudieron cargar las bases: '+(e.message||e);syncStatus.className='sync-status error'}});
+    $('#syncClose').addEventListener('click',closeSyncModal); $('#syncCancel').addEventListener('click',closeSyncModal);
+    syncOverlay.addEventListener('click',e=>{if(e.target===syncOverlay)closeSyncModal()});
+    $('#syncToggleAll').addEventListener('click',()=>{const boxes=[...syncSources.querySelectorAll('input[type="checkbox"]')],all=boxes.length&&boxes.every(x=>x.checked);boxes.forEach(x=>x.checked=!all);$('#syncToggleAll').textContent=all?'Seleccionar todas':'Quitar selección'});
+    $('#syncRun').addEventListener('click',async()=>{
+      const btn=$('#syncRun'),ids=[...syncSources.querySelectorAll('input:checked')].map(x=>x.value);
+      if(!ids.length){syncStatus.textContent='Selecciona al menos una base.';syncStatus.className='sync-status error';return}
+      setBusy(btn,true,'Actualizando…'); $('#syncClose').disabled=true; $('#syncCancel').disabled=true; syncStatus.textContent='Sincronizando '+ids.length+(ids.length===1?' base…':' bases…');syncStatus.className='sync-status';
+      try{
+        const {data:{session}}=await supabase.auth.getSession();if(!session?.access_token)throw new Error('La sesión expiró.');
+        const response=await fetch(SUPABASE_URL+'/functions/v1/sync-airtable',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({base_ids:ids})});
+        const data=await response.json();if(!response.ok||!data.ok)throw new Error(data.error||'No se pudo actualizar.');
+        syncStatus.textContent='Actualización completada.\n\n'+data.details.map(x=>x.fuente+'\nRevisados: '+x.leidos+' · Nuevos: '+x.nuevos+' · Actualizados: '+x.actualizados+' · Sin cambios: '+x.sin_cambios+' · Errores: '+x.errores).join('\n\n');
+        syncStatus.className='sync-status success';if(data.created||data.updated)resetSearchState();
+      }catch(e){syncStatus.textContent='No se pudo completar la actualización: '+(e.message||e);syncStatus.className='sync-status error'}
+      finally{setBusy(btn,false,'🔄 Actualizar seleccionadas');$('#syncClose').disabled=false;$('#syncCancel').disabled=false}
     });
 
     $('#adminBtn').addEventListener('click', async () => {
