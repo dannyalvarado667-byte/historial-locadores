@@ -1002,11 +1002,17 @@
         }
       });
     }
+    function formatExpedientes(value) {
+      if (!value) return '—';
+      const parts = String(value).split(/\s*\/\s*/).map(x => x.trim()).filter(Boolean);
+      return parts.map(escapeHTML).join('<br>');
+    }
+
     function rowCells(row) {
       const vals = {
         ver_nombre:'<td class="person"><button class="person-link" type="button" data-detail-index="'+visibleRows.indexOf(row)+'">'+escapeHTML(row.apellidos_nombres)+'</button></td>',
         ver_ruc:'<td class="mono">'+escapeHTML(row.ruc)+'</td>', ver_oc:'<td class="mono">'+escapeHTML(row.numero_oc)+'</td>',
-        ver_expediente:'<td class="mono">'+escapeHTML(row.expediente||'—')+'</td>', ver_monto:'<td class="mono">'+escapeHTML(formatMoney(row.monto_total))+'</td>',
+        ver_expediente:'<td class="mono">'+formatExpedientes(row.expediente)+'</td>', ver_monto:'<td class="mono">'+escapeHTML(formatMoney(row.monto_total))+'</td>',
         ver_fecha_inicio:'<td class="mono">'+escapeHTML(formatDate(row.fecha_inicio))+'</td>', ver_fecha_termino:'<td class="mono">'+escapeHTML(formatDate(row.fecha_termino))+'</td>',
         ver_plazo:'<td class="mono">'+escapeHTML(executionDays(row.fecha_inicio,row.fecha_termino))+'</td>', ver_area:'<td>'+escapeHTML(row.subgerencia||'—')+'</td>',
         ver_entregables:'<td>'+escapeHTML(row.numero_entregables??'—')+'</td>',
