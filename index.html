@@ -683,7 +683,7 @@
 
     function setBusy(button, busy, label) {
       button.disabled = busy;
-      button.innerHTML = busy ? '<span class="spinner" aria-hidden="true"></span>' : label;
+      button.innerHTML = busy ? '<span class="spinner" aria-hidden="true"></span><span>'+escapeHTML(label)+'</span>' : label;
     }
 
     function showMessage(element, text = '', type = '') {
@@ -1531,7 +1531,7 @@
       try{
         const {data:{session}}=await supabase.auth.getSession();if(!session?.access_token)throw new Error('La sesión expiró.');
         const progress=$('#syncProgress'),bar=$('#syncProgressBar'),pct=$('#syncProgressPct'),label=$('#syncProgressLabel'),detail=$('#syncProgressDetail');
-        progress.hidden=false;bar.style.width='0%';pct.textContent='0%';syncStatus.textContent='';
+        progress.hidden=false;bar.style.width='0%';pct.textContent='0%';syncStatus.textContent='';await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
         const totals={leidos:0,nuevos:0,actualizados:0,sin_cambios:0,errores:0},results=[];
         for(let i=0;i<ids.length;i++){
           const sourceBox=syncSources.querySelector('input[value="'+CSS.escape(ids[i])+'"]');
@@ -1547,6 +1547,7 @@
             processed+=Number(d.leidos||0);if(!d.leidos&&processed<total)throw new Error('La sincronización no pudo continuar.');
             const baseFraction=total?Math.min(processed/total,1):1,overall=((i+baseFraction)/ids.length)*100;
             bar.style.width=overall.toFixed(1)+'%';pct.textContent=Math.round(overall)+'%';detail.textContent=Math.min(processed,total)+' de '+total+' registros revisados';
+            await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
             if(processed>=total)results.push({fuente:d.fuente||sourceLabel,...totals});
           }
         }
