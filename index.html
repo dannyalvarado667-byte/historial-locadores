@@ -1514,6 +1514,7 @@
       if(error) throw error;
       syncSources.innerHTML=(data||[]).map(x=>'<label class="sync-source"><input type="checkbox" value="'+escapeHTML(x.base_id)+'"><span><strong>'+escapeHTML(x.periodo||x.nombre)+'</strong><small>'+escapeHTML(x.nombre)+' · '+escapeHTML(x.tabla||'DATOS_OC')+'</small></span></label>').join('');
       syncStatus.textContent=data?.length?'':'No hay bases activas configuradas.';
+      const run=$('#syncRun');run.dataset.completed='false';run.textContent='🔄 Actualizar seleccionadas';$('#syncProgress').hidden=true;
       $('#syncToggleAll').textContent='Seleccionar todas';
     }
     function closeSyncModal(){ if(!$('#syncRun').disabled) syncOverlay.hidden=true; }
@@ -1522,7 +1523,9 @@
     syncOverlay.addEventListener('click',e=>{if(e.target===syncOverlay)closeSyncModal()});
     $('#syncToggleAll').addEventListener('click',()=>{const boxes=[...syncSources.querySelectorAll('input[type="checkbox"]')],all=boxes.length&&boxes.every(x=>x.checked);boxes.forEach(x=>x.checked=!all);$('#syncToggleAll').textContent=all?'Seleccionar todas':'Quitar selección'});
     $('#syncRun').addEventListener('click',async()=>{
-      const btn=$('#syncRun'),ids=[...syncSources.querySelectorAll('input:checked')].map(x=>x.value);
+      const btn=$('#syncRun');
+      if(btn.dataset.completed==='true'){btn.dataset.completed='false';btn.textContent='🔄 Actualizar seleccionadas';syncOverlay.hidden=true;return}
+      const ids=[...syncSources.querySelectorAll('input:checked')].map(x=>x.value);
       if(!ids.length){syncStatus.textContent='Selecciona al menos una base.';syncStatus.className='sync-status error';return}
       setBusy(btn,true,'Actualizando…'); $('#syncClose').disabled=true; $('#syncCancel').disabled=true; syncStatus.textContent='Sincronizando '+ids.length+(ids.length===1?' base…':' bases…');syncStatus.className='sync-status';
       try{
@@ -1550,8 +1553,9 @@
         bar.style.width='100%';pct.textContent='100%';label.textContent='Actualización completada';detail.textContent='Todos los registros seleccionados fueron revisados.';
         syncStatus.textContent='Actualización completada.\n\nRevisados: '+totals.leidos+' · Nuevos: '+totals.nuevos+' · Actualizados: '+totals.actualizados+' · Sin cambios: '+totals.sin_cambios+' · Errores: '+totals.errores;
         syncStatus.className='sync-status success';if(totals.nuevos||totals.actualizados)resetSearchState();
+        btn.dataset.completed='true';btn.textContent='Cerrar';
       }catch(e){syncStatus.textContent='No se pudo completar la actualización: '+(e.message||e);syncStatus.className='sync-status error'}
-      finally{setBusy(btn,false,'🔄 Actualizar seleccionadas');$('#syncClose').disabled=false;$('#syncCancel').disabled=false}
+      finally{setBusy(btn,false,btn.dataset.completed==='true'?'Cerrar':'🔄 Actualizar seleccionadas');$('#syncClose').disabled=false;$('#syncCancel').disabled=false}
     });
 
     $('#adminBtn').addEventListener('click', async () => {
