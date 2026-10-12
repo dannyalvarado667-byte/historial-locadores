@@ -370,7 +370,7 @@
       <div id="sessionArea" class="session-area" hidden>
         <span id="userEmail" class="user-email"></span>
         <button id="syncBtn" class="btn btn-admin" type="button" hidden>🔄 Actualizar datos</button>
-        <button id="adminBtn" class="btn btn-admin" type="button" hidden>⚙ Usuarios</button>
+        <button id="adminBtn" class="btn btn-admin" type="button" hidden>⚙ Administración</button>
         <button id="logoutBtn" class="btn btn-ghost" type="button">Cerrar sesión</button>
       </div>
     </header>
@@ -1580,11 +1580,7 @@
       finally{setBusy(btn,false,btn.dataset.completed==='true'?'Cerrar':'🔄 Actualizar seleccionadas');$('#syncClose').disabled=false;$('#syncCancel').disabled=false}
     });
 
-    $('#adminBtn').addEventListener('click', async () => {
-      $('#adminPanel').hidden = false;
-      $('#adminPanel').scrollIntoView({behavior:'smooth', block:'start'});
-      await loadUsers();
-    });
+    $('#adminBtn').addEventListener('click', () => { window.location.href = 'admin.html'; });
     $('#closeAdmin').addEventListener('click', () => { $('#adminPanel').hidden = true; });
 
     $('#createUserForm').addEventListener('submit', async (e) => {
