@@ -340,7 +340,12 @@
       #adminBtn { font-size:0; width:40px; padding:0; }
       #adminBtn::first-letter { font-size:1rem; }
     }
-  </style>
+  
+    #tableWrap thead th.sortable { cursor:pointer; user-select:none; }
+    #tableWrap thead th.sortable::after { content:' ↕'; opacity:.42; font-size:.9em; }
+    #tableWrap thead th.sortable[data-sort-dir="asc"]::after { content:' ▲'; opacity:1; }
+    #tableWrap thead th.sortable[data-sort-dir="desc"]::after { content:' ▼'; opacity:1; }
+</style>
 </head>
 <body>
   <div class="shell">
@@ -495,18 +500,18 @@
           <table>
             <thead>
               <tr>
-                <th data-col-key="ver_nombre">Apellidos y nombres</th>
-                <th data-col-key="ver_ruc">RUC</th>
-                <th data-col-key="ver_oc">N.° OC</th>
-                <th data-col-key="ver_expediente">Expediente SGD</th>
-                <th data-col-key="ver_monto">Monto total</th>
-                <th data-col-key="ver_fecha_inicio">Fecha inicio OC</th>
-                <th data-col-key="ver_fecha_termino">Fecha de término OC</th>
-                <th data-col-key="ver_plazo">Plazo de ejecución en días</th>
-                <th data-col-key="ver_area">Área usuaria</th>
-                <th data-col-key="ver_entregables"># Entregables</th>
-                <th data-col-key="ver_status">Status</th>
-                <th data-col-key="ver_credito">Crédito presupuestal</th>
+                <th data-col-key="ver_nombre" class="sortable" data-sort-key="apellidos_nombres" tabindex="0">Apellidos y nombres</th>
+                <th data-col-key="ver_ruc" class="sortable" data-sort-key="ruc" tabindex="0">RUC</th>
+                <th data-col-key="ver_oc" class="sortable" data-sort-key="numero_oc" tabindex="0">N.° OC</th>
+                <th data-col-key="ver_expediente" class="sortable" data-sort-key="expediente" tabindex="0">Expediente SGD</th>
+                <th data-col-key="ver_monto" class="sortable" data-sort-key="monto_total" tabindex="0">Monto total</th>
+                <th data-col-key="ver_fecha_inicio" class="sortable" data-sort-key="fecha_inicio" tabindex="0">Fecha inicio OC</th>
+                <th data-col-key="ver_fecha_termino" class="sortable" data-sort-key="fecha_termino" tabindex="0">Fecha de término OC</th>
+                <th data-col-key="ver_plazo" class="sortable" data-sort-key="plazo" tabindex="0">Plazo de ejecución en días</th>
+                <th data-col-key="ver_area" class="sortable" data-sort-key="subgerencia" tabindex="0">Área usuaria</th>
+                <th data-col-key="ver_entregables" class="sortable" data-sort-key="numero_entregables" tabindex="0"># Entregables</th>
+                <th data-col-key="ver_status" class="sortable" data-sort-key="estado_oc" tabindex="0">Status</th>
+                <th data-col-key="ver_credito" class="sortable" data-sort-key="periodo" tabindex="0">Crédito presupuestal</th>
               </tr>
             </thead>
             <tbody id="resultsBody"></tbody>
@@ -594,6 +599,37 @@
     ];
     let currentColumns = Object.fromEntries(columnDefs.map(([k])=>[k,true]));
     let columnsTargetUser = null;
+    let sortKey = null;
+    let sortDir = 'asc';
+
+    function sortValue(row, key) {
+      if (key === 'plazo') return executionDaysNumber(row.fecha_inicio,row.fecha_termino) ?? -Infinity;
+      if (key === 'monto_total' || key === 'numero_entregables') return Number(row[key] ?? -Infinity);
+      if (key === 'fecha_inicio' || key === 'fecha_termino') return row[key] || '';
+      return String(row[key] ?? '').trim();
+    }
+    function applySort(rows) {
+      if (!sortKey) return rows;
+      const factor = sortDir === 'asc' ? 1 : -1;
+      return rows.sort((a,b)=>{
+        const av=sortValue(a,sortKey), bv=sortValue(b,sortKey);
+        if (typeof av==='number' && typeof bv==='number') return (av-bv)*factor;
+        return String(av).localeCompare(String(bv),'es',{numeric:true,sensitivity:'base'})*factor;
+      });
+    }
+    function updateSortHeaders() {
+      document.querySelectorAll('#tableWrap thead th[data-sort-key]').forEach(th=>{
+        th.dataset.sortDir = th.dataset.sortKey===sortKey ? sortDir : '';
+        th.setAttribute('aria-sort', th.dataset.sortKey===sortKey ? (sortDir==='asc'?'ascending':'descending') : 'none');
+      });
+    }
+    function sortByHeader(th) {
+      const key=th.dataset.sortKey;
+      if (sortKey===key) sortDir=sortDir==='asc'?'desc':'asc'; else { sortKey=key; sortDir='asc'; }
+      applySort(visibleRows);
+      updateSortHeaders();
+      drawRows();
+    }
 
     const escapeHTML = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
@@ -979,6 +1015,7 @@
         (!deliverables || String(row.numero_entregables ?? '') === deliverables) &&
         (!oc || String(row.numero_oc ?? '').includes(oc))
       );
+      applySort(visibleRows);
       drawRows();
     }
 
@@ -1107,6 +1144,11 @@
         resultsBody.innerHTML = visibleRows.map(rowHtml).join('');
       }
     }
+
+    document.querySelectorAll('#tableWrap thead th[data-sort-key]').forEach(th=>{
+      th.addEventListener('click',()=>sortByHeader(th));
+      th.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();sortByHeader(th);} });
+    });
 
     function openDetail(row) {
       if (!row) return;
