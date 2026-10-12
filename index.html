@@ -355,7 +355,7 @@
     .sync-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}.sync-status{margin:14px 0 0;color:var(--muted);white-space:pre-line}.sync-status.success{color:var(--green)}.sync-status.error{color:var(--red)}
 
     .sync-progress{margin:16px 0 4px}.sync-progress[hidden]{display:none}.sync-progress-head{display:flex;justify-content:space-between;gap:12px;font-size:.88rem;font-weight:700;color:var(--navy);margin-bottom:7px}.sync-progress-track{height:12px;background:#e7eef8;border-radius:999px;overflow:hidden}.sync-progress-bar{height:100%;width:0;background:var(--blue);border-radius:999px;transition:width .25s ease}.sync-progress-detail{margin-top:6px;font-size:.82rem;color:var(--muted)}
-</style>
+.sync-add{border-top:1px solid var(--line);margin-top:8px;padding-top:14px}.sync-add-toggle{border:0;background:transparent;color:var(--blue);font-weight:800;padding:4px 0}.sync-add-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.sync-add-form[hidden]{display:none}.sync-add-form label{font-size:.78rem;font-weight:700;color:var(--muted)}.sync-add-form input{width:100%;box-sizing:border-box;margin-top:5px;border:1px solid var(--line);border-radius:9px;padding:9px 10px;font:inherit}.sync-add-wide{grid-column:1/-1}.sync-add-save{justify-self:start}@media(max-width:600px){.sync-add-form{grid-template-columns:1fr}.sync-add-wide{grid-column:auto}}</style>
 </head>
 <body>
   <div class="shell">
@@ -535,6 +535,15 @@
         <div class="sync-head"><div><h2 id="syncTitle">Actualizar datos</h2><p>Selecciona una o varias bases de Airtable para sincronizar con Supabase.</p></div><button id="syncClose" class="sync-close" type="button" aria-label="Cerrar">×</button></div>
         <div class="sync-actions-top"><strong>Bases disponibles</strong><button id="syncToggleAll" type="button">Seleccionar todas</button></div>
         <div id="syncSources" class="sync-list"></div>
+        <div class="sync-add"><button id="syncAddToggle" class="sync-add-toggle" type="button">＋ Agregar nueva base</button>
+          <div id="syncAddForm" class="sync-add-form" hidden>
+            <label class="sync-add-wide">Nombre de la base<input id="syncNewName" placeholder="Ej.: Pagos_Locadores+Octubre+2026"></label>
+            <label>Período<input id="syncNewPeriod" placeholder="Ej.: Octubre 2026"></label>
+            <label>Tabla<input id="syncNewTable" value="DATOS_OC"></label>
+            <label class="sync-add-wide">ID de la base de Airtable<input id="syncNewBaseId" placeholder="appXXXXXXXXXXXXXX"></label>
+            <button id="syncAddSave" class="btn btn-tool sync-add-save" type="button">Agregar base</button>
+          </div>
+        </div>
         <div id="syncProgress" class="sync-progress" hidden><div class="sync-progress-head"><span id="syncProgressLabel">Preparando…</span><span id="syncProgressPct">0%</span></div><div class="sync-progress-track"><div id="syncProgressBar" class="sync-progress-bar"></div></div><div id="syncProgressDetail" class="sync-progress-detail"></div></div><p id="syncStatus" class="sync-status" role="status"></p>
         <div class="sync-footer"><button id="syncCancel" class="btn btn-tool" type="button">Cancelar</button><button id="syncRun" class="btn btn-primary" type="button">🔄 Actualizar seleccionadas</button></div>
       </section>
@@ -1517,6 +1526,18 @@
       const run=$('#syncRun');run.dataset.completed='false';run.textContent='🔄 Actualizar seleccionadas';$('#syncProgress').hidden=true;
       $('#syncToggleAll').textContent='Seleccionar todas';
     }
+    $('#syncAddToggle').addEventListener('click',()=>{const form=$('#syncAddForm');form.hidden=!form.hidden;$('#syncAddToggle').textContent=form.hidden?'＋ Agregar nueva base':'− Ocultar formulario'});
+    $('#syncAddSave').addEventListener('click',async()=>{
+      const btn=$('#syncAddSave'),nombre=$('#syncNewName').value.trim(),periodo=$('#syncNewPeriod').value.trim(),tabla=$('#syncNewTable').value.trim()||'DATOS_OC',base_id=$('#syncNewBaseId').value.trim();
+      if(!nombre||!periodo||!base_id){syncStatus.textContent='Completa nombre, período e ID de la base.';syncStatus.className='sync-status error';return}
+      setBusy(btn,true,'Agregando…');
+      try{const {data:{session}}=await supabase.auth.getSession();if(!session?.access_token)throw new Error('La sesión expiró.');
+        const response=await fetch(SUPABASE_URL+'/functions/v1/sync-airtable',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({mode:'register_source',nombre,periodo,tabla,base_id})});
+        const data=await response.json();if(!response.ok||!data.ok)throw new Error(data.error||'No se pudo agregar la base.');
+        syncStatus.textContent='Base agregada correctamente. Ya está disponible para sincronizar.';syncStatus.className='sync-status success';
+        $('#syncNewName').value='';$('#syncNewPeriod').value='';$('#syncNewBaseId').value='';$('#syncNewTable').value='DATOS_OC';$('#syncAddForm').hidden=true;$('#syncAddToggle').textContent='＋ Agregar nueva base';await loadSyncSources();
+      }catch(e){syncStatus.textContent='No se pudo agregar la base: '+(e.message||e);syncStatus.className='sync-status error'}finally{setBusy(btn,false,'Agregar base')}
+    });
     function closeSyncModal(){ if(!$('#syncRun').disabled) syncOverlay.hidden=true; }
     $('#syncBtn').addEventListener('click',async()=>{syncOverlay.hidden=false;try{await loadSyncSources()}catch(e){syncStatus.textContent='No se pudieron cargar las bases: '+(e.message||e);syncStatus.className='sync-status error'}});
     $('#syncClose').addEventListener('click',closeSyncModal); $('#syncCancel').addEventListener('click',closeSyncModal);
