@@ -455,7 +455,7 @@ init();
       syncStatus.textContent='Cargando bases disponibles…'; syncStatus.className='sync-status';
       const {data,error}=await supabase.from('airtable_sync_sources').select('id,nombre,base_id,tabla,periodo,activo,ultima_sincronizacion').eq('activo',true).order('id');
       if(error) throw error;
-      syncSources.innerHTML=(data||[]).map(x=>'<label class="sync-source"><input type="checkbox" value="'+escapeHTML(x.base_id)+'"><span><strong>'+escapeHTML(x.periodo||x.nombre)+'</strong><small>'+escapeHTML(x.nombre)+' · '+escapeHTML(x.tabla||'DATOS_OC')+'</small></span></label>').join('');
+      syncSources.innerHTML=(data||[]).map(x=>'<label class="sync-source"><input type="checkbox" value="'+esc(x.base_id)+'"><span><strong>'+esc(x.periodo||x.nombre)+'</strong><small>'+esc(x.nombre)+' · '+esc(x.tabla||'DATOS_OC')+'</small></span></label>').join('');
       syncStatus.textContent=data?.length?'':'No hay bases activas configuradas.';
       const run=$('#syncRun');run.dataset.completed='false';run.textContent='🔄 Actualizar seleccionadas';$('#syncProgress').hidden=true;
       $('#syncToggleAll').textContent='Seleccionar todas';
