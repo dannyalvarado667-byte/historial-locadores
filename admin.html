@@ -389,179 +389,30 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
   <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-
-    const SUPABASE_URL = 'https://acckrmanpgycunpvmfrl.supabase.co';
-    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_2nDjJmqL9oNdWGcpm3MgnQ_KXg5WuBI';
-    const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-    let currentAccessSessionId = null;
-    let activityHeartbeat = null;
-    let lastActivityWrite = 0;
-
-    const $ = (selector) => document.querySelector(selector);
-    const columnDefs = [
-      ['ver_nombre','Apellidos y nombres'],['ver_ruc','RUC'],['ver_oc','N.° OC'],['ver_expediente','Expediente SGD'],
-      ['ver_monto','Monto total'],['ver_fecha_inicio','Fecha inicio OC'],['ver_fecha_termino','Fecha de término OC'],
-      ['ver_plazo','Plazo de ejecución en días'],['ver_area','Área usuaria'],['ver_entregables','# Entregables'],
-      ['ver_status','Status'],['ver_credito','Crédito presupuestal']
-    ];
-    let columnsTargetUser = null;
-    const escapeHTML = (value='') => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    function setBusy(button,busy,label){button.disabled=busy;button.textContent=label;}
-    async function callAdmin(action, payload = {}) {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error('La sesión expiró. Vuelve a iniciar sesión.');
-
-      const response = await fetch(SUPABASE_URL + '/functions/v1/admin-users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_PUBLISHABLE_KEY,
-          'Authorization': 'Bearer ' + session.access_token
-        },
-        body: JSON.stringify({ action, ...payload })
-      });
-
-      let data = {};
-      try { data = await response.json(); } catch (_) {}
-      if (!response.ok) throw new Error(data?.error || ('Error del servidor (' + response.status + ')'));
-      if (data?.error) throw new Error(data.error);
-      return data;
-    }
-
-    const fmtDateTime = (value) => value ? new Date(value).toLocaleString('es-PE') : 'Nunca';
-
-    async function loadUsers() {
-      const body = $('#usersBody');
-      body.innerHTML = '<tr><td colspan="6">Cargando usuarios…</td></tr>';
-      try {
-        const data = await callAdmin('list');
-        body.innerHTML = (data.users || []).map(u => `
-          <tr data-id="${escapeHTML(u.user_id)}">
-            <td><input class="edit-name" value="${escapeHTML(u.nombre_completo)}" style="width:100%;min-width:150px;padding:7px;border:1px solid #ccd6e4;border-radius:7px"></td>
-            <td>${escapeHTML(u.email)}</td>
-            <td><select class="edit-role" style="padding:7px;border:1px solid #ccd6e4;border-radius:7px"><option value="CONSULTA" ${u.rol==='CONSULTA'?'selected':''}>Consulta</option><option value="ADMINISTRADOR" ${u.rol==='ADMINISTRADOR'?'selected':''}>Administrador</option></select></td>
-            <td class="${u.activo?'status-on':'status-off'}">${u.activo?'Activo':'Bloqueado'}</td>
-            <td>${escapeHTML(fmtDateTime(u.ultimo_acceso))}</td>
-            <td><div class="admin-actions">
-              <button data-action="save" title="Guardar cambios" aria-label="Guardar cambios">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path><path d="M17 21v-8H7v8"></path><path d="M7 3v5h8"></path></svg>
-                <span>Guardar</span>
-              </button>
-              <button data-action="toggle" class="${u.activo?'action-toggle':'action-activate'}" title="${u.activo?'Bloquear usuario':'Activar usuario'}" aria-label="${u.activo?'Bloquear usuario':'Activar usuario'}">
-                ${u.activo
-                  ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 9.5-2"></path></svg>'
-                  : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>'}
-                <span>${u.activo?'Bloquear':'Activar'}</span>
-              </button>
-              <button data-action="password" class="action-password" title="Cambiar contraseña" aria-label="Cambiar contraseña">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"></circle><path d="m11 12 8-8"></path><path d="m18 5 2 2"></path><path d="m15 8 2 2"></path></svg>
-                <span>Contraseña</span>
-              </button>
-              <button data-action="history" class="action-history" title="Ver historial de accesos" aria-label="Ver historial de accesos">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l3 2"></path></svg>
-                <span>Historial</span>
-              </button>
-              <button data-action="columns" class="action-columns" title="Configurar columnas visibles" aria-label="Configurar columnas visibles">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16M15 4v16"></path></svg>
-                <span>Columnas</span>
-              </button>
-            </div></td>
-          </tr>`).join('') || '<tr><td colspan="6">No hay usuarios.</td></tr>';
-      } catch (e) {
-        body.innerHTML = '<tr><td colspan="6">No fue posible cargar los usuarios.</td></tr>';
-        $('#adminMessage').textContent = e.message || 'Error';
-      }
-    }
-
-    $('#columnsClose').addEventListener('click',()=>{$('#columnsOverlay').hidden=true;});
-    $('#columnsOverlay').addEventListener('click',e=>{if(e.target===$('#columnsOverlay')) $('#columnsOverlay').hidden=true;});
-    $('#saveColumns').addEventListener('click',async()=>{
-      if(!columnsTargetUser) return;
-      const payload={user_id:columnsTargetUser.user_id};
-      columnDefs.forEach(([k])=>payload[k]=Boolean($('#columnsGrid').querySelector('[data-column-key="'+k+'"]')?.checked));
-      try{
-        await callAdmin('columns',payload);
-        $('#columnsMessage').textContent='Columnas actualizadas.';
-        $('#columnsMessage').className='message success';
-        setTimeout(()=>{ $('#columnsOverlay').hidden=true; $('#columnsMessage').textContent=''; },450);
-      }
-      catch(e){ $('#columnsMessage').textContent=e.message||'No se pudo guardar.'; $('#columnsMessage').className='message error'; }
-    });
-
-    $('#historyClose').addEventListener('click', () => { $('#historyOverlay').hidden = true; });
-    $('#historyOverlay').addEventListener('click', e => { if (e.target === $('#historyOverlay')) $('#historyOverlay').hidden = true; });
-
-    $('#createUserForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn=$('#createUserBtn'); setBusy(btn,true,'Crear usuario');
-      $('#adminMessage').textContent='';
-      try {
-        await callAdmin('create', {nombre_completo:$('#newName').value.trim(),email:$('#newEmail').value.trim(),password:$('#newPassword').value,rol:$('#newRole').value});
-        $('#createUserForm').reset();
-        $('#adminMessage').textContent='Usuario creado correctamente.';
-        $('#adminMessage').className='admin-message message success';
-        await loadUsers();
-      } catch(err) {
-        $('#adminMessage').textContent=err.message || 'No se pudo crear el usuario.';
-        $('#adminMessage').className='admin-message message error';
-      } finally { setBusy(btn,false,'Crear usuario'); }
-    });
-
-    $('#usersBody').addEventListener('click', async (e) => {
-      const btn=e.target.closest('button[data-action]'); if(!btn) return;
-      const tr=btn.closest('tr'); const user_id=tr.dataset.id; const action=btn.dataset.action;
-      const nombre_completo=tr.querySelector('.edit-name').value.trim();
-      const rol=tr.querySelector('.edit-role').value;
-      const activo=tr.querySelector('.status-on') !== null;
-      $('#adminMessage').textContent='';
-      try {
-        if(action==='history') {
-          await openAccessHistory(user_id, nombre_completo);
-          return;
-        }
-        if(action==='columns') {
-          const data = await callAdmin('list');
-          const user = (data.users||[]).find(x=>x.user_id===user_id);
-          const cols = Array.isArray(user?.app_user_columns) ? user.app_user_columns[0] : user?.app_user_columns;
-          columnsTargetUser = { user_id, nombre_completo, cols: cols || {} };
-          $('#columnsSubtitle').textContent = nombre_completo;
-          $('#columnsGrid').innerHTML = columnDefs.map(([key,label]) =>
-            '<label class="column-check"><input type="checkbox" data-column-key="'+key+'" '+(columnsTargetUser.cols[key]!==false?'checked':'')+'> <span>'+escapeHTML(label)+'</span></label>'
-          ).join('');
-          $('#columnsMessage').textContent='';
-          $('#columnsOverlay').hidden=false;
-          return;
-        }
-        if(action==='save') await callAdmin('update',{user_id,nombre_completo,rol,activo});
-        if(action==='toggle') await callAdmin('update',{user_id,nombre_completo,rol,activo:!activo});
-        if(action==='password') {
-          const password=prompt('Nueva contraseña (mínimo 8 caracteres):');
-          if(password===null) return;
-          await callAdmin('password',{user_id,password});
-        }
-        $('#adminMessage').textContent=action==='password'?'Contraseña actualizada.':'Usuario actualizado.';
-        $('#adminMessage').className='admin-message message success';
-        await loadUsers();
-      } catch(err) {
-        $('#adminMessage').textContent=err.message || 'No se pudo completar la operación.';
-        $('#adminMessage').className='admin-message message error';
-      }
-    });
-
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const SUPABASE_URL='https://acckrmanpgycunpvmfrl.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_2nDjJmqL9oNdWGcpm3MgnQ_KXg5WuBI';
+const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const $=s=>document.querySelector(s);
+const esc=(v='')=>String(v).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+async function api(action,payload={}){
+ const {data:{session}}=await supabase.auth.getSession(); if(!session?.access_token) throw Error('La sesión expiró.');
+ const r=await fetch(SUPABASE_URL+'/functions/v1/admin-users',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({action,...payload})});
+ const d=await r.json().catch(()=>({})); if(!r.ok||d.error) throw Error(d.error||'Error del servidor ('+r.status+')'); return d;
+}
+async function loadUsers(){
+ const body=$('#usersBody'); body.innerHTML='<tr><td colspan="6">Cargando usuarios…</td></tr>';
+ try{const d=await api('list');body.innerHTML=(d.users||[]).map(u=>'<tr data-id="'+esc(u.user_id)+'"><td>'+esc(u.nombre_completo)+'</td><td>'+esc(u.email)+'</td><td>'+esc(u.rol)+'</td><td>'+(u.activo?'Activo':'Bloqueado')+'</td><td>'+(u.ultimo_acceso?new Date(u.ultimo_acceso).toLocaleString('es-PE'):'Nunca')+'</td><td>—</td></tr>').join('')||'<tr><td colspan="6">No hay usuarios.</td></tr>'}catch(e){body.innerHTML='<tr><td colspan="6">'+esc(e.message)+'</td></tr>'}
+}
 async function init(){
  try{
-  const {data:{session},error:sessionError}=await supabase.auth.getSession();
-  if(sessionError) throw sessionError;
+  const {data:{session},error}=await supabase.auth.getSession(); if(error)throw error;
   if(!session?.user){location.replace('./');return}
   $('#userEmail').textContent=session.user.email||'';
-  const {data:p,error}=await supabase.from('app_users').select('rol,activo').eq('user_id',session.user.id).maybeSingle();
-  if(error) throw error;
-  if(!p?.activo||p.rol!=='ADMINISTRADOR'){
-   $('#adminGate').innerHTML='<h2>Acceso no autorizado</h2><p>Esta sección está disponible únicamente para administradores.</p><a class="btn btn-primary back-link" href="./">Volver al historial</a>';return
-  }
-  $('#adminGate').hidden=true;$('#adminContent').hidden=false;await loadUsers();
- }catch(e){
-  $('#adminGate').innerHTML='<h2>No se pudo cargar Administración</h2><p>'+escapeHTML(e?.message||'Error al verificar el acceso.')+'</p><a class="btn btn-primary back-link" href="./">Volver al historial</a>';
- }
-}init();</script></body></html>
+  const {data:p,error:pe}=await supabase.from('app_users').select('rol,activo').eq('user_id',session.user.id).maybeSingle(); if(pe)throw pe;
+  if(!p?.activo||p.rol!=='ADMINISTRADOR'){ $('#adminGate').innerHTML='<h2>Acceso no autorizado</h2><p>Esta sección está disponible únicamente para administradores.</p><a class="btn btn-primary back-link" href="./">Volver al historial</a>';return}
+  $('#adminGate').hidden=true; $('#adminContent').hidden=false; await loadUsers();
+ }catch(e){ $('#adminGate').innerHTML='<h2>No se pudo cargar Administración</h2><p>'+esc(e.message||e)+'</p><a class="btn btn-primary back-link" href="./">Volver al historial</a>'}
+}
+init();
+</script></body></html>
