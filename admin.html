@@ -413,6 +413,7 @@ const SUPABASE_PUBLISHABLE_KEY='sb_publishable_2nDjJmqL9oNdWGcpm3MgnQ_KXg5WuBI';
 const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 const $=s=>document.querySelector(s);
 const esc=(v='')=>String(v).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const setBusy=(button,busy,label)=>{button.disabled=busy;button.textContent=label;};
 async function api(action,payload={}){
  const {data:{session}}=await supabase.auth.getSession(); if(!session?.access_token) throw Error('La sesión expiró.');
  const r=await fetch(SUPABASE_URL+'/functions/v1/admin-users',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({action,...payload})});
