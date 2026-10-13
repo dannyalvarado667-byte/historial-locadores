@@ -400,10 +400,26 @@ async function api(action,payload={}){
  const r=await fetch(SUPABASE_URL+'/functions/v1/admin-users',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({action,...payload})});
  const d=await r.json().catch(()=>({})); if(!r.ok||d.error) throw Error(d.error||'Error del servidor ('+r.status+')'); return d;
 }
+const columnDefs=[['ver_nombre','Apellidos y nombres'],['ver_ruc','RUC'],['ver_oc','N.° OC'],['ver_expediente','Expediente SGD'],['ver_monto','Monto total'],['ver_fecha_inicio','Fecha inicio OC'],['ver_fecha_termino','Fecha de término OC'],['ver_plazo','Plazo de ejecución en días'],['ver_area','Área usuaria'],['ver_entregables','# Entregables'],['ver_status','Status'],['ver_credito','Crédito presupuestal']];
+let usersCache=[],columnsTarget=null;
 async function loadUsers(){
  const body=$('#usersBody'); body.innerHTML='<tr><td colspan="6">Cargando usuarios…</td></tr>';
- try{const d=await api('list');body.innerHTML=(d.users||[]).map(u=>'<tr data-id="'+esc(u.user_id)+'"><td>'+esc(u.nombre_completo)+'</td><td>'+esc(u.email)+'</td><td>'+esc(u.rol)+'</td><td>'+(u.activo?'Activo':'Bloqueado')+'</td><td>'+(u.ultimo_acceso?new Date(u.ultimo_acceso).toLocaleString('es-PE'):'Nunca')+'</td><td>—</td></tr>').join('')||'<tr><td colspan="6">No hay usuarios.</td></tr>'}catch(e){body.innerHTML='<tr><td colspan="6">'+esc(e.message)+'</td></tr>'}
+ try{const d=await api('list');usersCache=d.users||[];body.innerHTML=usersCache.map(u=>'<tr data-id="'+esc(u.user_id)+'"><td><input class="edit-name" value="'+esc(u.nombre_completo)+'" style="width:100%;padding:6px;border:1px solid #ccd6e4;border-radius:7px"></td><td>'+esc(u.email)+'</td><td><select class="edit-role"><option value="CONSULTA" '+(u.rol==='CONSULTA'?'selected':'')+'>Consulta</option><option value="ADMINISTRADOR" '+(u.rol==='ADMINISTRADOR'?'selected':'')+'>Administrador</option></select></td><td>'+(u.activo?'Activo':'Bloqueado')+'</td><td>'+(u.ultimo_acceso?new Date(u.ultimo_acceso).toLocaleString('es-PE'):'Nunca')+'</td><td><div class="admin-actions"><button data-action="save">💾 <span>Guardar</span></button><button data-action="toggle">'+(u.activo?'🔒 <span>Bloquear</span>':'🔓 <span>Activar</span>')+'</button><button data-action="password">🔑 <span>Contraseña</span></button><button data-action="history">🕘 <span>Historial</span></button><button data-action="columns">▦ <span>Columnas</span></button></div></td></tr>').join('')||'<tr><td colspan="6">No hay usuarios.</td></tr>'}catch(e){body.innerHTML='<tr><td colspan="6">'+esc(e.message)+'</td></tr>'}
 }
+$('#usersBody').addEventListener('click',async e=>{
+ const btn=e.target.closest('button[data-action]');if(!btn)return;const tr=btn.closest('tr'),id=tr.dataset.id,u=usersCache.find(x=>x.user_id===id);if(!u)return;
+ try{const action=btn.dataset.action;
+  if(action==='save'){await api('update',{user_id:id,nombre_completo:tr.querySelector('.edit-name').value.trim(),rol:tr.querySelector('.edit-role').value,activo:u.activo});}
+  if(action==='toggle'){await api('update',{user_id:id,nombre_completo:u.nombre_completo,rol:u.rol,activo:!u.activo});}
+  if(action==='password'){const p=prompt('Nueva contraseña (mínimo 8 caracteres):');if(p===null)return;await api('password',{user_id:id,password:p});}
+  if(action==='columns'){columnsTarget=u;const cols=Array.isArray(u.app_user_columns)?u.app_user_columns[0]:u.app_user_columns||{};$('#columnsSubtitle').textContent=u.nombre_completo;$('#columnsGrid').innerHTML=columnDefs.map(([k,l])=>'<label class="column-check"><input type="checkbox" data-column-key="'+k+'" '+(cols[k]!==false?'checked':'')+'> <span>'+esc(l)+'</span></label>').join('');$('#columnsOverlay').hidden=false;return}
+  if(action==='history'){const {data,error}=await supabase.from('sesiones_acceso').select('inicio_sesion,fin_sesion,duracion_segundos,motivo_cierre').eq('user_id',id).order('inicio_sesion',{ascending:false}).limit(100);if(error)throw error;$('#historySubtitle').textContent=u.nombre_completo;$('#historyContent').innerHTML=(data||[]).map(x=>'<div style="padding:10px;border-bottom:1px solid #e3e9f1"><b>'+new Date(x.inicio_sesion).toLocaleString('es-PE')+'</b> · '+(x.fin_sesion?new Date(x.fin_sesion).toLocaleString('es-PE'):'Sesión abierta')+' · '+esc(x.motivo_cierre||'—')+'</div>').join('')||'<p>No hay accesos registrados.</p>';$('#historyOverlay').hidden=false;return}
+  $('#adminMessage').textContent=action==='password'?'Contraseña actualizada.':'Cambios guardados.';await loadUsers();
+ }catch(err){$('#adminMessage').textContent=err.message||'No se pudo completar la acción.'}
+});
+$('#columnsClose').onclick=()=>$('#columnsOverlay').hidden=true;$('#historyClose').onclick=()=>$('#historyOverlay').hidden=true;
+$('#saveColumns').onclick=async()=>{if(!columnsTarget)return;const p={user_id:columnsTarget.user_id};columnDefs.forEach(([k])=>p[k]=!!$('#columnsGrid').querySelector('[data-column-key="'+k+'"]')?.checked);try{await api('columns',p);$('#columnsMessage').textContent='Columnas actualizadas.';setTimeout(()=>{$('#columnsOverlay').hidden=true;loadUsers()},400)}catch(e){$('#columnsMessage').textContent=e.message}};
+
 async function init(){
  try{
   const {data:{session},error}=await supabase.auth.getSession(); if(error)throw error;
