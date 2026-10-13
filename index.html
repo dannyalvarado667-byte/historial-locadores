@@ -575,7 +575,7 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
   <script type="module">
@@ -1309,81 +1309,59 @@
       downloadBlob(new Blob([csv], {type:'text/csv;charset=utf-8;'}), 'historial_locadores.csv');
     }
 
-    function exportXLSX() {
+    async function exportXLSX() {
       const data = exportData();
       if (!data.length) return;
       const headers = Object.keys(data[0]);
       const grouped = currentSearchMode === 'year' && viewMode.value !== 'list';
-      const title = 'HISTORIAL DE ÓRDENES DE COMPRA';
-      const meta = 'Consulta: ' + currentTerm + '   |   Registros: ' + visibleRows.length + '   |   Generado: ' + new Date().toLocaleString('es-PE');
-      let aoa = [[title],[meta],[],headers];
-      const merges = [
-        {s:{r:0,c:0},e:{r:0,c:Math.max(0,headers.length-1)}},
-        {s:{r:1,c:0},e:{r:1,c:Math.max(0,headers.length-1)}}
-      ];
+      const wb = new ExcelJS.Workbook();
+      wb.creator = 'GCTIC - ESSALUD';
+      wb.title = 'Historial de órdenes de compra';
+      const ws = wb.addWorksheet('Historial OC', {views:[{showGridLines:false}]});
+      const lastCol = Math.max(1, headers.length);
 
-      if (grouped) {
-        groupedExportSets().forEach(rows => {
-          const groupRow = aoa.length;
-          aoa.push([groupHeading(rows)]);
-          merges.push({s:{r:groupRow,c:0},e:{r:groupRow,c:Math.max(0,headers.length-1)}});
-          rows.forEach(row => {
-            const item = data[visibleRows.indexOf(row)];
-            aoa.push(headers.map(h => item[h]));
-          });
-          aoa.push([]);
-        });
-      } else {
-        data.forEach(item => aoa.push(headers.map(h => item[h])));
-      }
+      ws.mergeCells(1,1,1,lastCol);
+      ws.getCell(1,1).value = 'HISTORIAL DE ÓRDENES DE COMPRA';
+      ws.mergeCells(2,1,2,lastCol);
+      ws.getCell(2,1).value = 'Consulta: ' + currentTerm + '   |   Registros: ' + visibleRows.length + '   |   Generado: ' + new Date().toLocaleString('es-PE');
+      ws.getRow(1).height = 24; ws.getRow(2).height = 20; ws.getRow(3).height = 8;
 
-      const ws = XLSX.utils.aoa_to_sheet(aoa);
-      ws['!merges'] = merges;
-      const widths = {
-        'Apellidos y nombres':38,'RUC':15,'N.° OC':16,'Expediente SGD':23,'Monto total':16,
-        'Fecha inicio OC':17,'Fecha de término OC':19,'Plazo de ejecución en días':20,
-        'Área usuaria':17,'# Entregables':14,'Status':19,'Crédito presupuestal':21
-      };
-      ws['!cols'] = headers.map(h => ({wch:widths[h] || 17}));
-      ws['!rows'] = [{hpt:24},{hpt:20},{hpt:8},{hpt:35}];
-
-      // Presentación solicitada: sin cuadrícula, cabecera centrada y con bordes.
-      // SheetJS CE conserva de forma segura la altura y la vista sin cuadrícula.
-      ws['!sheetViews'] = [{showGridLines:false}];
-      headers.forEach((h,ci) => {
-        const cell = ws[XLSX.utils.encode_cell({r:3,c:ci})];
-        if (!cell) return;
-        cell.s = {
-          alignment:{horizontal:'center',vertical:'center',wrapText:true},
-          border:{
-            top:{style:'thin'},bottom:{style:'thin'},
-            left:{style:'thin'},right:{style:'thin'}
-          }
+      const headerRow = ws.getRow(4);
+      headerRow.values = headers;
+      headerRow.height = 35;
+      headerRow.eachCell(cell => {
+        cell.alignment = {horizontal:'center', vertical:'middle', wrapText:true};
+        cell.border = {
+          top:{style:'thin'}, left:{style:'thin'},
+          bottom:{style:'thin'}, right:{style:'thin'}
         };
+        cell.font = {bold:true};
       });
 
-      // Mantener datos numéricos con formatos nativos, sin estilos avanzados.
-      const range = XLSX.utils.decode_range(ws['!ref']);
-      headers.forEach((h,ci) => {
-        for (let r=4; r<=range.e.r; r++) {
-          const cell = ws[XLSX.utils.encode_cell({r,c:ci})];
-          if (!cell) continue;
-          if (h === 'Monto total' && typeof cell.v === 'number') cell.z = '"S/ " #,##0.00';
-          if (h === 'Plazo de ejecución en días' && typeof cell.v === 'number') cell.z = '0';
-        }
-      });
-      if (!grouped) {
-        ws['!autofilter'] = {ref:XLSX.utils.encode_range({r:3,c:0},{r:range.e.r,c:range.e.c})};
-      }
-
-      const wb = XLSX.utils.book_new();
-      wb.Props = {
-        Title:'Historial de órdenes de compra',
-        Subject:'Consulta de historial de locadores',
-        Author:'GCTIC - ESSALUD'
+      const addDataRow = item => {
+        const row = ws.addRow(headers.map(h => item[h]));
+        headers.forEach((h,ci) => {
+          const cell=row.getCell(ci+1);
+          if(h==='Monto total' && typeof cell.value==='number') cell.numFmt='"S/ " #,##0.00';
+          if(h==='Plazo de ejecución en días' && typeof cell.value==='number') cell.numFmt='0';
+        });
       };
-      XLSX.utils.book_append_sheet(wb, ws, 'Historial OC');
-      XLSX.writeFile(wb, 'historial_locadores.xlsx', {bookType:'xlsx', compression:true});
+
+      if(grouped){
+        groupedExportSets().forEach(rows=>{
+          const r=ws.addRow([groupHeading(rows)]);
+          ws.mergeCells(r.number,1,r.number,lastCol);
+          rows.forEach(row=>addDataRow(data[visibleRows.indexOf(row)]));
+          ws.addRow([]);
+        });
+      } else data.forEach(addDataRow);
+
+      const widths={'Apellidos y nombres':38,'RUC':15,'N.° OC':16,'Expediente SGD':23,'Monto total':16,'Fecha inicio OC':17,'Fecha de término OC':19,'Plazo de ejecución en días':20,'Área usuaria':17,'# Entregables':14,'Status':19,'Crédito presupuestal':21};
+      headers.forEach((h,i)=>ws.getColumn(i+1).width=widths[h]||17);
+      if(!grouped) ws.autoFilter={from:{row:4,column:1},to:{row:4,column:lastCol}};
+
+      const buffer=await wb.xlsx.writeBuffer();
+      downloadBlob(new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'historial_locadores.xlsx');
     }
 
     function exportPDF() {
