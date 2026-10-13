@@ -1345,7 +1345,22 @@
         'Área usuaria':17,'# Entregables':14,'Status':19,'Crédito presupuestal':21
       };
       ws['!cols'] = headers.map(h => ({wch:widths[h] || 17}));
-      ws['!rows'] = [{hpt:24},{hpt:20},{hpt:8},{hpt:28}];
+      ws['!rows'] = [{hpt:24},{hpt:20},{hpt:8},{hpt:35}];
+
+      // Presentación solicitada: sin cuadrícula, cabecera centrada y con bordes.
+      // SheetJS CE conserva de forma segura la altura y la vista sin cuadrícula.
+      ws['!sheetViews'] = [{showGridLines:false}];
+      headers.forEach((h,ci) => {
+        const cell = ws[XLSX.utils.encode_cell({r:3,c:ci})];
+        if (!cell) return;
+        cell.s = {
+          alignment:{horizontal:'center',vertical:'center',wrapText:true},
+          border:{
+            top:{style:'thin'},bottom:{style:'thin'},
+            left:{style:'thin'},right:{style:'thin'}
+          }
+        };
+      });
 
       // Mantener datos numéricos con formatos nativos, sin estilos avanzados.
       const range = XLSX.utils.decode_range(ws['!ref']);
