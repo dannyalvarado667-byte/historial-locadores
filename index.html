@@ -89,6 +89,12 @@
     .btn-primary:hover { background: var(--blue-dark); }
     .btn-ghost { border: 1px solid rgba(255,255,255,.35); color: #fff; background: rgba(255,255,255,.08); }
     .btn-admin { border: 1px solid rgba(255,255,255,.35); color:#fff; background:rgba(255,255,255,.14); }
+    .reports-card { width:min(760px,calc(100% - 28px)); }
+    .reports-list { padding:18px 24px 26px; }
+    .report-item { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:18px; border:1px solid var(--line); border-radius:13px; background:#f8fbff; }
+    .report-item h3 { margin:0 0 6px; color:var(--navy); font-size:1rem; }
+    .report-item p { margin:0; color:var(--muted); font-size:.82rem; line-height:1.5; }
+    @media(max-width:650px){.report-item{align-items:stretch;flex-direction:column}.session-area{gap:7px}.btn-admin{padding-inline:10px;font-size:.78rem}}
     .admin-panel { margin-bottom:24px; padding:24px; border:1px solid var(--line); border-radius:var(--radius); background:#fff; box-shadow:0 10px 30px rgba(23,54,93,.07); }
     .admin-head { display:flex; justify-content:space-between; align-items:center; gap:15px; margin-bottom:18px; }
     .admin-head h2 { margin:0; color:var(--navy); }
@@ -369,6 +375,7 @@
       </div>
       <div id="sessionArea" class="session-area" hidden>
         <span id="userEmail" class="user-email"></span>
+        <button id="reportsBtn" class="btn btn-admin" type="button">▤ REPORTES</button>
         <button id="adminBtn" class="btn btn-admin" type="button" hidden>⚙ Administración</button>
         <button id="logoutBtn" class="btn btn-ghost" type="button">Cerrar sesión</button>
       </div>
@@ -564,6 +571,25 @@
         <p id="columnsMessage" class="message"></p>
       </section>
     </div>
+    <div id="reportsOverlay" class="detail-overlay" hidden>
+      <section class="detail-card reports-card" role="dialog" aria-modal="true" aria-labelledby="reportsTitle">
+        <div class="detail-head">
+          <div><h2 id="reportsTitle">Reportes</h2><p>Reportes generados directamente con la información disponible en Supabase.</p></div>
+          <button id="reportsClose" class="detail-close" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <div class="reports-list">
+          <div class="report-item">
+            <div>
+              <h3>Proyección de Locadores 2026</h3>
+              <p>Distribución mensual de montos por locador. El crédito Junio-Julio se divide 50% en junio y 50% en julio.</p>
+            </div>
+            <button id="reportProjection2026" class="btn btn-primary" type="button">↓ Generar Excel</button>
+          </div>
+          <p id="reportsMessage" class="message" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+    </div>
+
     <div id="historyOverlay" class="detail-overlay" hidden>
       <section class="detail-card history-card" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
         <div class="detail-head">
@@ -1486,6 +1512,70 @@
         $('#adminMessage').textContent = e.message || 'Error';
       }
     }
+
+
+    async function generateProjectionReport2026() {
+      const btn = $('#reportProjection2026');
+      const msg = $('#reportsMessage');
+      setBusy(btn, true, 'Generando…');
+      showMessage(msg, '');
+      try {
+        const { data: rows, error } = await supabase.from('historial_locadores')
+          .select('ruc,apellidos_nombres,monto_total,subgerencia,periodo')
+          .order('apellidos_nombres', { ascending:true });
+        if (error) throw error;
+        const byRuc = new Map();
+        const rank = p => p === 'Setiembre 2026' ? 3 : p === 'Agosto 2026' ? 2 : p === 'Junio-Julio 2026' ? 1 : 0;
+        (rows || []).forEach(row => {
+          const ruc = String(row.ruc || '').trim();
+          if (!ruc) return;
+          if (!byRuc.has(ruc)) byRuc.set(ruc, {ruc,nombre:row.apellidos_nombres || '',area:'',areaRank:-1,months:Array(12).fill(0)});
+          const item = byRuc.get(ruc);
+          if (row.apellidos_nombres) item.nombre = row.apellidos_nombres;
+          const rr = rank(row.periodo);
+          if (row.subgerencia && rr >= item.areaRank) { item.area = row.subgerencia; item.areaRank = rr; }
+          const amount = Number(row.monto_total || 0);
+          if (row.periodo === 'Junio-Julio 2026') { item.months[5] += amount / 2; item.months[6] += amount / 2; }
+          else if (row.periodo === 'Agosto 2026') item.months[7] += amount;
+          else if (row.periodo === 'Setiembre 2026') item.months[8] += amount;
+        });
+        const data = [...byRuc.values()].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es',{sensitivity:'base'}));
+        if (!data.length) throw new Error('No hay datos disponibles para generar el reporte.');
+
+        const wb = new ExcelJS.Workbook();
+        wb.creator = 'GCTIC - ESSALUD';
+        wb.title = 'Proyección de Locadores 2026';
+        const ws = wb.addWorksheet('Reporte 2026', {views:[{state:'frozen',ySplit:5,showGridLines:false}]});
+        const headers = ['N°','RUC','APELLIDOS Y NOMBRES','ÁREA USUARIA','ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SET','OCT','NOV','DIC','TOTAL 2026'];
+        ws.mergeCells('A1:Q1'); ws.getCell('A1').value='FORMULARIO 2 - PROYECCIÓN DE SERVICIOS DE LOCADORES ASISTENCIALES Y ADMINISTRATIVOS';
+        ws.mergeCells('A2:Q2'); ws.getCell('A2').value='Fuente: Supabase - Historial de Locadores · Generado: ' + new Date().toLocaleString('es-PE');
+        ws.mergeCells('A3:Q3'); ws.getCell('A3').value='Criterio: el crédito Junio-Julio se distribuye 50% en junio y 50% en julio; Agosto y Setiembre se asignan al mes correspondiente. Meses sin datos disponibles se muestran en 0.';
+        ws.getRow(5).values=headers;
+        data.forEach((item,i)=>{
+          const total=item.months.reduce((a,b)=>a+b,0);
+          const row=ws.addRow([i+1,item.ruc,item.nombre,item.area,...item.months,total]);
+          for(let col=5;col<=17;col++) row.getCell(col).numFmt='#,##0.00';
+        });
+        ws.getCell('A1').font={bold:true,size:14};
+        ws.getRow(5).font={bold:true};
+        ws.getRow(5).alignment={horizontal:'center',vertical:'middle',wrapText:true};
+        const widths=[6,15,38,16,11,11,11,11,11,11,11,11,11,11,11,11,15];
+        widths.forEach((w,i)=>ws.getColumn(i+1).width=w);
+        ws.autoFilter={from:'A5',to:'Q5'};
+        const buffer=await wb.xlsx.writeBuffer();
+        downloadBlob(new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'proyeccion_locadores_2026.xlsx');
+        showMessage(msg, 'Reporte generado correctamente.', 'success');
+      } catch (e) {
+        showMessage(msg, e.message || 'No se pudo generar el reporte.', 'error');
+      } finally {
+        setBusy(btn, false, '↓ Generar Excel');
+      }
+    }
+
+    $('#reportsBtn').addEventListener('click',()=>{ $('#reportsMessage').textContent=''; $('#reportsOverlay').hidden=false; });
+    $('#reportsClose').addEventListener('click',()=>{ $('#reportsOverlay').hidden=true; });
+    $('#reportsOverlay').addEventListener('click',e=>{ if(e.target===$('#reportsOverlay')) $('#reportsOverlay').hidden=true; });
+    $('#reportProjection2026').addEventListener('click', generateProjectionReport2026);
 
     $('#columnsClose').addEventListener('click',()=>{$('#columnsOverlay').hidden=true;});
     $('#columnsOverlay').addEventListener('click',e=>{if(e.target===$('#columnsOverlay')) $('#columnsOverlay').hidden=true;});
