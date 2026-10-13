@@ -1342,6 +1342,7 @@
         const row = ws.addRow(headers.map(h => item[h]));
         headers.forEach((h,ci) => {
           const cell=row.getCell(ci+1);
+          cell.alignment = {horizontal:'center', vertical:'middle', wrapText:true};
           if(h==='Monto total' && typeof cell.value==='number') cell.numFmt='"S/ " #,##0.00';
           if(h==='Plazo de ejecución en días' && typeof cell.value==='number') cell.numFmt='0';
         });
