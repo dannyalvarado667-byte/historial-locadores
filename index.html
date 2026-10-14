@@ -1684,6 +1684,46 @@
           totalRow.getCell(col).font={bold:true};
         }
         totalRow.getCell(7).font={bold:true};
+
+        // Cuadro adicional: suma del MONTO TOTAL de todas las OC por locador.
+        // Se mantiene separado del detalle por CCP para no perder trazabilidad.
+        const locadorTotals = new Map();
+        data.forEach(item => {
+          const key = item.ruc || item.nombre;
+          if (!locadorTotals.has(key)) locadorTotals.set(key, {ruc:item.ruc,nombre:item.nombre,total:0});
+          locadorTotals.get(key).total += Number(item.monto || 0);
+        });
+        const locadorRows = [...locadorTotals.values()]
+          .sort((a,b)=>a.nombre.localeCompare(b.nombre,'es',{sensitivity:'base'}));
+        const summaryStart = totalRow.number + 3;
+        ws.mergeCells(`A${summaryStart}:D${summaryStart}`);
+        ws.getCell(`A${summaryStart}`).value='RESUMEN DE MONTO TOTAL POR LOCADOR';
+        ws.getCell(`A${summaryStart}`).font={bold:true,size:12};
+        const summaryHeader = ws.getRow(summaryStart + 1);
+        summaryHeader.getCell(1).value='N°';
+        summaryHeader.getCell(2).value='RUC';
+        summaryHeader.getCell(3).value='APELLIDOS Y NOMBRES';
+        summaryHeader.getCell(4).value='MONTO TOTAL';
+        summaryHeader.eachCell({includeEmpty:false},cell=>{
+          cell.font={bold:true};
+          cell.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+          cell.border={top:{style:'thin'},bottom:{style:'thin'},left:{style:'thin'},right:{style:'thin'}};
+        });
+        locadorRows.forEach((item,i)=>{
+          const row=ws.getRow(summaryStart + 2 + i);
+          row.getCell(1).value=i+1;
+          row.getCell(2).value=item.ruc;
+          row.getCell(3).value=item.nombre;
+          row.getCell(4).value=item.total;
+          row.getCell(4).numFmt='"S/ " #,##0.00';
+        });
+        const grandRow=ws.getRow(summaryStart + 2 + locadorRows.length);
+        grandRow.getCell(3).value='TOTAL GENERAL';
+        grandRow.getCell(3).font={bold:true};
+        grandRow.getCell(4).value={formula:`SUM(D${summaryStart+2}:D${grandRow.number-1})`};
+        grandRow.getCell(4).numFmt='"S/ " #,##0.00';
+        grandRow.getCell(4).font={bold:true};
+
         ws.getCell('A1').font={bold:true,size:14};
         ws.getCell('A2').font={size:9};
         ws.getCell('A3').font={size:9};
