@@ -1677,10 +1677,12 @@
 
         const addLocadorTotalRow = () => {
           if (!currentRuc || !locadorStartRow) return;
-          const row = ws.addRow(['','',`TOTAL ${currentName}`,'','','','',locadorMonto,...locadorMonths,locadorMonths.reduce((a,b)=>a+b,0)]);
+          const projectedTotal = locadorMonths.reduce((a,b)=>a+b,0);
+          const row = ws.addRow(['','',`TOTAL ${currentName}`,'','','','',locadorMonto,'','','','','','','',projectedTotal]);
           row.font={bold:true};
           row.alignment={horizontal:'center',vertical:'middle',wrapText:true};
-          for(let col=8;col<=16;col++) row.getCell(col).numFmt='"S/ " #,##0.00';
+          row.getCell(8).numFmt='"S/ " #,##0.00';
+          row.getCell(16).numFmt='"S/ " #,##0.00';
           row.eachCell(cell=>{
             cell.border={top:{style:'thin'},bottom:{style:'thin'}};
           });
