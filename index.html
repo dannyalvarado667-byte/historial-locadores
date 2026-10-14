@@ -1291,6 +1291,9 @@
     $('#clearFilters').addEventListener('click', () => {
       selectedPeriods.clear();
       ['#filterArea','#filterStatus','#filterDeliverables','#filterOc'].forEach(sel => $(sel).value = '');
+      sortKey = null;
+      sortDir = 'asc';
+      updateSortHeaders();
       prepareFilters();
       applyFilters();
     });
