@@ -390,7 +390,7 @@
           <p>Busca a un locador por nombre o RUC y revisa las órdenes de compra registradas, sus periodos, montos y situación.</p>
         </div>
 
-        <form id="loginForm" class="card" novalidate>
+        <form id="loginForm" class="card" method="post" action="javascript:void(0)" novalidate>
           <h2 id="loginTitle">Iniciar sesión</h2>
           <p class="card-subtitle">Ingresa con el usuario autorizado en Supabase.</p>
           <div class="field">
@@ -621,6 +621,12 @@
     let currentAccessSessionId = null;
     let activityHeartbeat = null;
     let lastActivityWrite = 0;
+
+    // Seguridad: nunca conservar credenciales ni otros parámetros sensibles en la URL.
+    // Si una versión anterior del formulario los agregó, limpiarlos inmediatamente.
+    if (window.location.search || window.location.hash) {
+      history.replaceState(null, '', window.location.pathname);
+    }
 
     const $ = (selector) => document.querySelector(selector);
     const loginView = $('#loginView');
