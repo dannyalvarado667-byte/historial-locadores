@@ -94,6 +94,7 @@
     .report-item { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:18px; border:1px solid var(--line); border-radius:13px; background:#f8fbff; }
     .report-item h3 { margin:0 0 6px; color:var(--navy); font-size:1rem; }
     .report-item p { margin:0; color:var(--muted); font-size:.82rem; line-height:1.5; }
+    .report-item + .report-item { margin-top:12px; }
     @media(max-width:650px){.report-item{align-items:stretch;flex-direction:column}.session-area{gap:7px}.btn-admin{padding-inline:10px;font-size:.78rem}}
     .admin-panel { margin-bottom:24px; padding:24px; border:1px solid var(--line); border-radius:var(--radius); background:#fff; box-shadow:0 10px 30px rgba(23,54,93,.07); }
     .admin-head { display:flex; justify-content:space-between; align-items:center; gap:15px; margin-bottom:18px; }
@@ -584,6 +585,13 @@
               <p>Distribución mensual de montos por locador. El crédito Junio-Julio se divide 50% en junio y 50% en julio.</p>
             </div>
             <button id="reportProjection2026" class="btn btn-primary" type="button">↓ Generar Excel</button>
+          </div>
+          <div class="report-item">
+            <div>
+              <h3>Distribución Mensual de Pagos por Periodo de Ejecución</h3>
+              <p>Proyección mensual de pagos según el vencimiento de los entregables del crédito Junio-Julio 2026.</p>
+            </div>
+            <button id="reportPaymentDistribution" class="btn btn-primary" type="button">↓ Generar Excel</button>
           </div>
           <p id="reportsMessage" class="message" role="status" aria-live="polite"></p>
         </div>
@@ -1572,10 +1580,121 @@
       }
     }
 
+
+    async function generatePaymentDistributionReport() {
+      const btn = $('#reportPaymentDistribution');
+      const msg = $('#reportsMessage');
+      setBusy(btn, true, 'Generando…');
+      showMessage(msg, '');
+      try {
+        const { data: rows, error } = await supabase.from('historial_locadores')
+          .select('ruc,apellidos_nombres,monto_total,subgerencia,periodo,fecha_inicio,fecha_termino,numero_entregables,estado_oc')
+          .eq('periodo','Junio-Julio 2026')
+          .order('apellidos_nombres', { ascending:true });
+        if (error) throw error;
+
+        const byRuc = new Map();
+        const addMonth = (item, dateValue, amount) => {
+          if (!dateValue || !amount) return;
+          const d = new Date(dateValue + 'T12:00:00');
+          if (d.getFullYear() !== 2026) return;
+          const m = d.getMonth();
+          if (m >= 5 && m <= 11) item.months[m - 5] += amount;
+        };
+
+        (rows || []).forEach(row => {
+          if (!row.fecha_inicio || !row.fecha_termino) return;
+          const ruc = String(row.ruc || '').trim();
+          if (!ruc) return;
+          if (!byRuc.has(ruc)) byRuc.set(ruc, {
+            ruc, nombre:row.apellidos_nombres || '', area:row.subgerencia || '',
+            estado:'SIN INCIDENCIA', monto:0, months:Array(7).fill(0)
+          });
+          const item = byRuc.get(ruc);
+          if (row.apellidos_nombres) item.nombre = row.apellidos_nombres;
+          if (row.subgerencia) item.area = row.subgerencia;
+          if (row.estado_oc === 'DESISTIÓ') item.estado = 'DESISTIÓ';
+          const amount = Number(row.monto_total || 0);
+          item.monto += amount;
+          const entregables = Number(row.numero_entregables || 1);
+          if (entregables === 2) {
+            const start = new Date(row.fecha_inicio + 'T12:00:00');
+            start.setDate(start.getDate() + 29);
+            const end = new Date(row.fecha_termino + 'T12:00:00');
+            const p1 = start > end ? end : start;
+            addMonth(item, p1.toISOString().slice(0,10), amount / 2);
+            addMonth(item, row.fecha_termino, amount / 2);
+          } else {
+            addMonth(item, row.fecha_termino, amount);
+          }
+        });
+
+        const data = [...byRuc.values()].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es',{sensitivity:'base'}));
+        if (!data.length) throw new Error('No hay datos disponibles para generar el reporte.');
+
+        const wb = new ExcelJS.Workbook();
+        wb.creator = 'GCTIC - ESSALUD';
+        wb.title = 'Distribución Mensual de Pagos por Periodo de Ejecución';
+        const ws = wb.addWorksheet('Distribución pagos', {views:[{state:'frozen',ySplit:5,showGridLines:false}]});
+        const headers = ['N°','RUC','APELLIDOS Y NOMBRES','ÁREA USUARIA','CRÉDITO PRESUPUESTAL','ESTADO','MONTO TOTAL','JUN','JUL','AGO','SET','OCT','NOV','DIC','TOTAL PROYECTADO'];
+        ws.mergeCells('A1:O1'); ws.getCell('A1').value='DISTRIBUCIÓN MENSUAL DE PAGOS POR PERIODO DE EJECUCIÓN';
+        ws.mergeCells('A2:O2'); ws.getCell('A2').value='Crédito presupuestal analizado: Junio-Julio 2026 · Fuente: Supabase · Generado: ' + new Date().toLocaleString('es-PE');
+        ws.mergeCells('A3:O3'); ws.getCell('A3').value='Criterio: el pago se proyecta según el vencimiento de cada entregable. En servicios de 2 entregables, el monto total se distribuye 50% por entregable.';
+        ws.getRow(5).values = headers;
+        ws.getRow(5).height = 35;
+        ws.getRow(5).eachCell(cell => {
+          cell.font={bold:true};
+          cell.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+          cell.border={top:{style:'thin'},bottom:{style:'thin'},left:{style:'thin'},right:{style:'thin'}};
+        });
+
+        data.forEach((item,i)=>{
+          const total=item.months.reduce((a,b)=>a+b,0);
+          const row=ws.addRow([i+1,item.ruc,item.nombre,item.area,'Junio-Julio 2026',item.estado,item.monto,...item.months,total]);
+          for(let col=7;col<=15;col++) row.getCell(col).numFmt='#,##0.00';
+          if(item.estado==='DESISTIÓ') row.eachCell(cell=>{ cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFCE8E8'}}; });
+        });
+
+        const totalRow=ws.addRow(['','','','','','TOTAL PROYECTADO']);
+        for(let col=7;col<=15;col++){
+          const letter=ws.getColumn(col).letter;
+          totalRow.getCell(col).value={formula:`SUM(${letter}6:${letter}${totalRow.number-1})`};
+          totalRow.getCell(col).numFmt='#,##0.00';
+          totalRow.getCell(col).font={bold:true};
+        }
+        totalRow.getCell(6).font={bold:true};
+
+        ws.getCell('A1').font={bold:true,size:14};
+        ws.getCell('A2').font={size:9};
+        ws.getCell('A3').font={size:9};
+        const widths=[6,15,38,16,20,18,15,11,11,11,11,11,11,11,18];
+        widths.forEach((w,i)=>ws.getColumn(i+1).width=w);
+        ws.autoFilter={from:'A5',to:'O5'};
+
+        const summary=wb.addWorksheet('Resumen mensual',{views:[{showGridLines:false}]});
+        summary.getRow(1).values=['MES','MONTO PROYECTADO','CRÉDITO'];
+        summary.getRow(1).font={bold:true};
+        ['JUN','JUL','AGO','SET','OCT','NOV','DIC'].forEach((m,i)=>{
+          const row=summary.addRow([m,{formula:`'Distribución pagos'!${ws.getColumn(8+i).letter}${totalRow.number}`},'Junio-Julio 2026']);
+          row.getCell(2).numFmt='#,##0.00';
+        });
+        summary.getColumn(1).width=14; summary.getColumn(2).width=20; summary.getColumn(3).width=22;
+
+        const buffer=await wb.xlsx.writeBuffer();
+        downloadBlob(new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'distribucion_mensual_pagos_periodo_ejecucion.xlsx');
+        showMessage(msg, 'Reporte generado correctamente.', 'success');
+      } catch (e) {
+        showMessage(msg, e.message || 'No se pudo generar el reporte.', 'error');
+      } finally {
+        setBusy(btn, false, '↓ Generar Excel');
+      }
+    }
+
     $('#reportsBtn').addEventListener('click',()=>{ $('#reportsMessage').textContent=''; $('#reportsOverlay').hidden=false; });
     $('#reportsClose').addEventListener('click',()=>{ $('#reportsOverlay').hidden=true; });
     $('#reportsOverlay').addEventListener('click',e=>{ if(e.target===$('#reportsOverlay')) $('#reportsOverlay').hidden=true; });
     $('#reportProjection2026').addEventListener('click', generateProjectionReport2026);
+    $('#reportPaymentDistribution').addEventListener('click', generatePaymentDistributionReport);
 
     $('#columnsClose').addEventListener('click',()=>{$('#columnsOverlay').hidden=true;});
     $('#columnsOverlay').addEventListener('click',e=>{if(e.target===$('#columnsOverlay')) $('#columnsOverlay').hidden=true;});
