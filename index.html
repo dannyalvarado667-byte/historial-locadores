@@ -589,7 +589,7 @@
           <div class="report-item">
             <div>
               <h3>Distribución Mensual de Pagos por Periodo de Ejecución</h3>
-              <p>Proyección mensual de pagos según el vencimiento de los entregables del crédito Junio-Julio 2026.</p>
+              <p>Proyección mensual de pagos según el vencimiento de los entregables, identificando la CCP de origen de cada OC.</p>
             </div>
             <button id="reportPaymentDistribution" class="btn btn-primary" type="button">↓ Generar Excel</button>
           </div>
@@ -1587,13 +1587,20 @@
       setBusy(btn, true, 'Generando…');
       showMessage(msg, '');
       try {
-        const { data: rows, error } = await supabase.from('historial_locadores')
-          .select('ruc,apellidos_nombres,monto_total,subgerencia,periodo,fecha_inicio,fecha_termino,numero_entregables,estado_oc')
-          .eq('periodo','Junio-Julio 2026')
-          .order('apellidos_nombres', { ascending:true });
-        if (error) throw error;
+        // Traer todos los créditos presupuestales. Supabase pagina internamente en bloques
+        // para que el reporte siga funcionando cuando la base crezca.
+        const rows = [];
+        const pageSize = 500;
+        for (let from = 0; ; from += pageSize) {
+          const { data, error } = await supabase.from('historial_locadores')
+            .select('ruc,apellidos_nombres,numero_oc,monto_total,subgerencia,periodo,fecha_inicio,fecha_termino,numero_entregables,estado_oc')
+            .order('apellidos_nombres', { ascending:true })
+            .range(from, from + pageSize - 1);
+          if (error) throw error;
+          rows.push(...(data || []));
+          if (!data || data.length < pageSize) break;
+        }
 
-        const byRuc = new Map();
         const addMonth = (item, dateValue, amount) => {
           if (!dateValue || !amount) return;
           const d = new Date(dateValue + 'T12:00:00');
@@ -1602,20 +1609,23 @@
           if (m >= 5 && m <= 11) item.months[m - 5] += amount;
         };
 
+        // Una fila por Locador + CCP + OC. Así nunca se mezclan créditos.
+        const data = [];
         (rows || []).forEach(row => {
           if (!row.fecha_inicio || !row.fecha_termino) return;
           const ruc = String(row.ruc || '').trim();
           if (!ruc) return;
-          if (!byRuc.has(ruc)) byRuc.set(ruc, {
-            ruc, nombre:row.apellidos_nombres || '', area:row.subgerencia || '',
-            estado:'SIN INCIDENCIA', monto:0, months:Array(7).fill(0)
-          });
-          const item = byRuc.get(ruc);
-          if (row.apellidos_nombres) item.nombre = row.apellidos_nombres;
-          if (row.subgerencia) item.area = row.subgerencia;
-          if (row.estado_oc === 'DESISTIÓ') item.estado = 'DESISTIÓ';
           const amount = Number(row.monto_total || 0);
-          item.monto += amount;
+          const item = {
+            ruc,
+            nombre: row.apellidos_nombres || '',
+            area: row.subgerencia || '',
+            oc: String(row.numero_oc || ''),
+            credito: row.periodo || 'Sin crédito',
+            estado: row.estado_oc === 'DESISTIÓ' ? 'DESISTIÓ' : 'SIN INCIDENCIA',
+            monto: amount,
+            months: Array(7).fill(0)
+          };
           const entregables = Number(row.numero_entregables || 1);
           if (entregables === 2) {
             const start = new Date(row.fecha_inicio + 'T12:00:00');
@@ -1627,19 +1637,23 @@
           } else {
             addMonth(item, row.fecha_termino, amount);
           }
+          data.push(item);
         });
-
-        const data = [...byRuc.values()].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es',{sensitivity:'base'}));
+        data.sort((a,b) =>
+          a.nombre.localeCompare(b.nombre,'es',{sensitivity:'base'}) ||
+          a.credito.localeCompare(b.credito,'es',{sensitivity:'base'}) ||
+          a.oc.localeCompare(b.oc,'es',{numeric:true})
+        );
         if (!data.length) throw new Error('No hay datos disponibles para generar el reporte.');
 
         const wb = new ExcelJS.Workbook();
         wb.creator = 'GCTIC - ESSALUD';
-        wb.title = 'Distribución Mensual de Pagos por Periodo de Ejecución';
-        const ws = wb.addWorksheet('Distribución pagos', {views:[{state:'frozen',ySplit:5,showGridLines:false}]});
-        const headers = ['N°','RUC','APELLIDOS Y NOMBRES','ÁREA USUARIA','CRÉDITO PRESUPUESTAL','ESTADO','MONTO TOTAL','JUN','JUL','AGO','SET','OCT','NOV','DIC','TOTAL PROYECTADO'];
-        ws.mergeCells('A1:O1'); ws.getCell('A1').value='DISTRIBUCIÓN MENSUAL DE PAGOS POR PERIODO DE EJECUCIÓN';
-        ws.mergeCells('A2:O2'); ws.getCell('A2').value='Crédito presupuestal analizado: Junio-Julio 2026 · Fuente: Supabase · Generado: ' + new Date().toLocaleString('es-PE');
-        ws.mergeCells('A3:O3'); ws.getCell('A3').value='Criterio: el pago se proyecta según el vencimiento de cada entregable. En servicios de 2 entregables, el monto total se distribuye 50% por entregable.';
+        wb.title = 'Distribución Mensual de Pagos por CCP';
+        const ws = wb.addWorksheet('Distribución por CCP', {views:[{state:'frozen',ySplit:5,showGridLines:false}]});
+        const headers = ['N°','RUC','APELLIDOS Y NOMBRES','ÁREA USUARIA','N.° OC','CRÉDITO PRESUPUESTAL','ESTADO','MONTO TOTAL','JUN','JUL','AGO','SET','OCT','NOV','DIC','TOTAL PROYECTADO'];
+        ws.mergeCells('A1:P1'); ws.getCell('A1').value='DISTRIBUCIÓN MENSUAL DE PAGOS POR PERIODO DE EJECUCIÓN Y CRÉDITO PRESUPUESTAL';
+        ws.mergeCells('A2:P2'); ws.getCell('A2').value='Fuente: Supabase - Historial de Locadores · Generado: ' + new Date().toLocaleString('es-PE');
+        ws.mergeCells('A3:P3'); ws.getCell('A3').value='Criterio: cada OC conserva su CCP de origen. El pago se proyecta según el vencimiento contractual de sus entregables; en servicios de 2 entregables, el monto se distribuye 50% por entregable.';
         ws.getRow(5).values = headers;
         ws.getRow(5).height = 35;
         ws.getRow(5).eachCell(cell => {
@@ -1650,39 +1664,54 @@
 
         data.forEach((item,i)=>{
           const total=item.months.reduce((a,b)=>a+b,0);
-          const row=ws.addRow([i+1,item.ruc,item.nombre,item.area,'Junio-Julio 2026',item.estado,item.monto,...item.months,total]);
-          for(let col=7;col<=15;col++) row.getCell(col).numFmt='#,##0.00';
+          const row=ws.addRow([i+1,item.ruc,item.nombre,item.area,item.oc,item.credito,item.estado,item.monto,...item.months,total]);
+          for(let col=8;col<=16;col++) row.getCell(col).numFmt='"S/ " #,##0.00';
+          row.alignment={horizontal:'center',vertical:'middle',wrapText:true};
           if(item.estado==='DESISTIÓ') row.eachCell(cell=>{ cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFCE8E8'}}; });
         });
 
-        const totalRow=ws.addRow(['','','','','','TOTAL PROYECTADO']);
-        for(let col=7;col<=15;col++){
+        const totalRow=ws.addRow(['','','','','','','TOTAL PROYECTADO']);
+        for(let col=8;col<=16;col++){
           const letter=ws.getColumn(col).letter;
           totalRow.getCell(col).value={formula:`SUM(${letter}6:${letter}${totalRow.number-1})`};
-          totalRow.getCell(col).numFmt='#,##0.00';
+          totalRow.getCell(col).numFmt='"S/ " #,##0.00';
           totalRow.getCell(col).font={bold:true};
         }
-        totalRow.getCell(6).font={bold:true};
-
+        totalRow.getCell(7).font={bold:true};
         ws.getCell('A1').font={bold:true,size:14};
         ws.getCell('A2').font={size:9};
         ws.getCell('A3').font={size:9};
-        const widths=[6,15,38,16,20,18,15,11,11,11,11,11,11,11,18];
+        const widths=[6,15,38,16,15,22,18,15,11,11,11,11,11,11,11,18];
         widths.forEach((w,i)=>ws.getColumn(i+1).width=w);
-        ws.autoFilter={from:'A5',to:'O5'};
+        ws.autoFilter={from:'A5',to:'P5'};
 
-        const summary=wb.addWorksheet('Resumen mensual',{views:[{showGridLines:false}]});
-        summary.getRow(1).values=['MES','MONTO PROYECTADO','CRÉDITO'];
+        // Resumen: mes + CCP. Permite saber cuánto se paga y de qué certificación proviene.
+        const summary=wb.addWorksheet('Resumen mensual por CCP',{views:[{showGridLines:false}]});
+        summary.getRow(1).values=['MES','CRÉDITO PRESUPUESTAL','MONTO PROYECTADO'];
         summary.getRow(1).font={bold:true};
-        ['JUN','JUL','AGO','SET','OCT','NOV','DIC'].forEach((m,i)=>{
-          const row=summary.addRow([m,{formula:`'Distribución pagos'!${ws.getColumn(8+i).letter}${totalRow.number}`},'Junio-Julio 2026']);
-          row.getCell(2).numFmt='#,##0.00';
+        summary.getRow(1).alignment={horizontal:'center',vertical:'middle',wrapText:true};
+        const monthNames=['JUN','JUL','AGO','SET','OCT','NOV','DIC'];
+        const summaryMap=new Map();
+        data.forEach(item=>{
+          item.months.forEach((amount,i)=>{
+            if(!amount) return;
+            const key=i+'||'+item.credito;
+            summaryMap.set(key,(summaryMap.get(key)||0)+amount);
+          });
         });
-        summary.getColumn(1).width=14; summary.getColumn(2).width=20; summary.getColumn(3).width=22;
+        [...summaryMap.entries()]
+          .map(([key,amount])=>{ const [idx,credito]=key.split('||'); return {idx:Number(idx),credito,amount}; })
+          .sort((a,b)=>a.idx-b.idx || a.credito.localeCompare(b.credito,'es',{sensitivity:'base'}))
+          .forEach(x=>{
+            const row=summary.addRow([monthNames[x.idx],x.credito,x.amount]);
+            row.getCell(3).numFmt='"S/ " #,##0.00';
+          });
+        summary.getColumn(1).width=14; summary.getColumn(2).width=24; summary.getColumn(3).width=22;
+        summary.autoFilter={from:'A1',to:'C1'};
 
         const buffer=await wb.xlsx.writeBuffer();
-        downloadBlob(new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'distribucion_mensual_pagos_periodo_ejecucion.xlsx');
-        showMessage(msg, 'Reporte generado correctamente.', 'success');
+        downloadBlob(new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'distribucion_mensual_pagos_por_ccp.xlsx');
+        showMessage(msg, 'Reporte general por CCP generado correctamente.', 'success');
       } catch (e) {
         showMessage(msg, e.message || 'No se pudo generar el reporte.', 'error');
       } finally {
@@ -1798,30 +1827,3 @@
         showMessage(loginMessage, 'La sesión se cerró por 5 minutos de inactividad.', 'error');
       }, INACTIVITY_LIMIT);
     }
-
-    ['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach((eventName) => {
-      window.addEventListener(eventName, () => { resetInactivityTimer(); touchAccessSession(); }, { passive: true });
-    });
-
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) resetInactivityTimer();
-    });
-
-    const { data: { session } } = await supabase.auth.getSession();
-    showSession(session);
-    if (session?.user) {
-      await startAccessSession(session);
-      resetInactivityTimer();
-    }
-
-    supabase.auth.onAuthStateChange((_event, currentSession) => {
-      showSession(currentSession);
-      if (currentSession?.user) resetInactivityTimer();
-      else {
-        clearTimeout(inactivityTimer);
-        inactivityTimer = null;
-      }
-    });
-  </script>
-</body>
-</html>
