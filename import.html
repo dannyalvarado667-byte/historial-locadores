@@ -32,14 +32,14 @@ main{width:min(1180px,calc(100% - 28px));margin:0 auto;padding:34px 0 64px}.eyeb
 </section>
 <section id="results" hidden>
 <div class="summary"><div class="metric"><strong id="mTotal">0</strong><span>Registros analizados</span></div><div class="metric"><strong id="mLoc">0</strong><span>Nuevos locadores</span></div><div class="metric"><strong id="mOc">0</strong><span>Nuevas OC</span></div><div class="metric warn"><strong id="mDiff">0</strong><span>Diferencias</span></div><div class="metric err"><strong id="mErr">0</strong><span>Errores</span></div></div>
-<div class="review"><div class="review-head"><h2>Revisión previa</h2><div class="filters" id="filters"><button class="chip active" data-f="all">Todos</button><button class="chip" data-f="nueva_oc">Nuevos</button><button class="chip" data-f="diferencia">Diferencias</button><button class="chip" data-f="error">Errores</button><button class="chip" data-f="sin_cambios">Sin cambios</button></div></div><div class="items" id="items"></div></div>
+<div class="review"><div class="review-head"><h2>Revisión previa</h2><div class="filters" id="filters"><button class="chip" data-f="all">Todos</button><button class="chip" data-f="nueva_oc">Nuevos</button><button class="chip active" data-f="diferencia">Diferencias</button><button class="chip" data-f="error">Errores</button><button class="chip" data-f="sin_cambios">Sin cambios</button></div></div><div class="items" id="items"></div></div>
 <div class="footerbar"><p id="confirmHint">Revisa el análisis antes de confirmar.</p><button class="btn primary" id="confirm">Confirmar importación</button></div>
 </section>
 </main>
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 const supabase=createClient('https://acckrmanpgycunpvmfrl.supabase.co','sb_publishable_2nDjJmqL9oNdWGcpm3MgnQ_KXg5WuBI');
-const $=s=>document.querySelector(s); let workbook=null,fileName='',parsedRows=[],analysis=null,filter='all';
+const $=s=>document.querySelector(s); let workbook=null,fileName='',parsedRows=[],analysis=null,filter='diferencia';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const {data:{session}}=await supabase.auth.getSession(); if(!session){location.href='./';}
 $('#logout').onclick=async()=>{await supabase.auth.signOut();location.href='./'};
