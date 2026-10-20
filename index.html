@@ -69,7 +69,10 @@
     .brand strong { display: block; font-size: 1.03rem; }
     .brand span { display: block; margin-top: 2px; font-size: .78rem; opacity: .76; }
 
-    .session-area { display: flex; align-items: center; gap: 14px; }
+    .session-area { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .main-nav { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .main-nav a { display:inline-flex; align-items:center; justify-content:center; min-height:38px; padding:8px 11px; border:1px solid rgba(255,255,255,.35); border-radius:9px; color:#fff; background:rgba(255,255,255,.08); text-decoration:none; font-size:.76rem; font-weight:750; white-space:nowrap; }
+    .main-nav a:hover,.main-nav a.active { background:#fff; color:var(--navy); }
     .user-email { max-width: 280px; overflow: hidden; text-overflow: ellipsis; font-size: .86rem; opacity: .85; }
 
     .btn {
@@ -375,10 +378,15 @@
         </div>
       </div>
       <div id="sessionArea" class="session-area" hidden>
-        <span id="userEmail" class="user-email"></span>
-        <button id="reportsBtn" class="btn btn-admin" type="button">▤ REPORTES</button>
+        <nav class="main-nav" aria-label="Navegación principal">
+          <a class="active" href="index.html">Órdenes de Compra</a>
+          <a href="seguimiento.html">Seguimiento</a>
+          <a href="import.html">Importar Excel</a>
+        </nav>
+        <button id="reportsBtn" class="btn btn-admin" type="button">▤ Reportes</button>
         <button id="adminBtn" class="btn btn-admin" type="button" hidden>⚙ Administración</button>
-        <button id="logoutBtn" class="btn btn-ghost" type="button">Cerrar sesión</button>
+        <span id="userEmail" class="user-email"></span>
+        <button id="logoutBtn" class="btn btn-ghost" type="button">Salir</button>
       </div>
     </header>
 
