@@ -381,7 +381,7 @@
         <nav class="main-nav" aria-label="Navegación principal">
           <a class="active" href="index.html">Órdenes de Compra</a>
           <a href="seguimiento.html">Seguimiento</a>
-          <a href="import.html">Importar Excel</a>
+          <a id="importNav" href="import.html" hidden>Importar Excel</a>
         </nav>
         <button id="reportsBtn" class="btn btn-admin" type="button">▤ Reportes</button>
         <button id="adminBtn" class="btn btn-admin" type="button" hidden>⚙ Administración</button>
@@ -751,7 +751,7 @@
       const adminBtn = $('#adminBtn');
       adminBtn.hidden = true;
       if (!session?.user) return false;
-      const { data: profile, error } = await supabase.from('app_users').select('rol,activo,nombre_completo,app_user_columns(ver_nombre,ver_ruc,ver_oc,ver_expediente,ver_monto,ver_fecha_inicio,ver_fecha_termino,ver_plazo,ver_area,ver_entregables,ver_status,ver_credito)').eq('user_id', session.user.id).maybeSingle();
+      const { data: profile, error } = await supabase.from('app_users').select('rol,activo,nombre_completo,app_user_permissions(puede_crear,puede_editar,puede_administrar_usuarios),app_user_columns(ver_nombre,ver_ruc,ver_oc,ver_expediente,ver_monto,ver_fecha_inicio,ver_fecha_termino,ver_plazo,ver_area,ver_entregables,ver_status,ver_credito)').eq('user_id', session.user.id).maybeSingle();
       if (error || !profile?.activo) {
         await supabase.auth.signOut();
         showMessage(loginMessage, 'Tu usuario no está autorizado o se encuentra bloqueado.', 'error');
@@ -760,7 +760,12 @@
       const ownCols = Array.isArray(profile.app_user_columns) ? profile.app_user_columns[0] : profile.app_user_columns;
       if (ownCols) currentColumns = { ...currentColumns, ...ownCols };
       applyColumnVisibility();
-      adminBtn.hidden = profile.rol !== 'ADMINISTRADOR';
+      const ownPerms = Array.isArray(profile.app_user_permissions) ? profile.app_user_permissions[0] : profile.app_user_permissions;
+      const canAdmin = profile.rol === 'ADMINISTRADOR' && ownPerms?.puede_administrar_usuarios === true;
+      const canImport = profile.rol === 'ADMINISTRADOR' || ownPerms?.puede_crear === true || ownPerms?.puede_editar === true;
+      adminBtn.hidden = !canAdmin;
+      const importNav = $('#importNav');
+      if (importNav) importNav.hidden = !canImport;
       return true;
     }
 
