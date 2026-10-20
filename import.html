@@ -21,7 +21,7 @@ main{width:min(1180px,calc(100% - 28px));margin:0 auto;padding:34px 0 64px}.eyeb
 </style>
 </head>
 <body>
-<header><div class="brand"><a class="logo" href="./" aria-label="Volver al historial">OC</a><div><strong>Gestión de Locadores</strong><span>Importación segura de órdenes de compra · GCTIC</span></div></div><div class="head-actions"><a href="index.html">Órdenes de Compra</a><a href="seguimiento.html">Seguimiento</a><a href="import.html" style="background:#fff;color:#17365d">Importar Excel</a><a href="admin.html">Administración</a><button id="logout">Salir</button></div></header>
+<header><div class="brand"><a class="logo" href="./" aria-label="Volver al historial">OC</a><div><strong>Gestión de Locadores</strong><span>Importación segura de órdenes de compra · GCTIC</span></div></div><div class="head-actions"><a href="index.html">Órdenes de Compra</a><a href="seguimiento.html">Seguimiento</a><a href="import.html" style="background:#fff;color:#17365d">Importar Excel</a><a id="adminNav" href="admin.html" hidden>Administración</a><button id="logout">Salir</button></div></header>
 <main>
 <p class="eyebrow">Etapa 1 · Migración desde Airtable</p><h1 class="title">Importar órdenes de compra</h1><p class="subtitle">El archivo se analiza primero. Nada se guarda en Supabase hasta que revises el resultado y confirmes.</p>
 <div class="steps"><div class="step active" id="s1">1 · Cargar Excel</div><div class="step" id="s2">2 · Validar</div><div class="step" id="s3">3 · Revisar</div><div class="step" id="s4">4 · Confirmar</div></div>
@@ -42,6 +42,13 @@ const supabase=createClient('https://acckrmanpgycunpvmfrl.supabase.co','sb_publi
 const $=s=>document.querySelector(s); let workbook=null,fileName='',parsedRows=[],analysis=null,filter='diferencia';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const {data:{session}}=await supabase.auth.getSession(); if(!session){location.href='./';}
+if(session){
+  const {data:profile}=await supabase.from('app_users').select('rol,activo,app_user_permissions(puede_crear,puede_editar,puede_administrar_usuarios)').eq('user_id',session.user.id).maybeSingle();
+  const perms=Array.isArray(profile?.app_user_permissions)?profile.app_user_permissions[0]:profile?.app_user_permissions;
+  const canImport=profile?.activo&&(profile?.rol==='ADMINISTRADOR'||perms?.puede_crear===true||perms?.puede_editar===true);
+  if(!canImport){location.replace('./');}
+  const adminNav=$('#adminNav'); if(adminNav) adminNav.hidden=!(profile?.rol==='ADMINISTRADOR'&&perms?.puede_administrar_usuarios===true);
+}
 $('#logout').onclick=async()=>{await supabase.auth.signOut();location.href='./'};
 const normalizeHeader=s=>String(s??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[º°\.]/g,'').replace(/\s+/g,' ');
 const aliases={
