@@ -458,66 +458,47 @@ header #userEmail,header #sessionUser{display:none!important}
 
 #viewModeField #viewMode{display:none!important}.group-menu-wrap{position:relative}.group-menu{position:absolute;top:calc(100% + 6px);left:0;width:100%;min-width:200px;background:#fff;border:1px solid #cbdbe5;border-radius:12px;padding:6px;box-shadow:0 12px 32px #18354b30;z-index:105}.group-menu[hidden]{display:none!important}.group-menu button{display:block;width:100%;border:0;border-radius:7px;background:transparent;padding:11px 12px;text-align:left;font-size:11px;font-weight:800;color:#53647c;cursor:pointer;text-transform:uppercase;letter-spacing:0;line-height:1.35}.group-menu button:hover{background:#eef7fa}.group-menu button.selected{background:#e1f4f4;color:#087f8c;font-weight:800}
 
-/* Mantener visibles los encabezados de la tabla al desplazar la página */
-#tableWrap{overflow:visible!important}
-#tableWrap table{border-collapse:separate!important;border-spacing:0!important}
-#tableWrap thead{position:sticky;top:76px;z-index:90}
-#tableWrap thead th{position:sticky!important;top:76px!important;z-index:90!important;background:#f8fafc!important;box-shadow:0 2px 0 #dce5ee!important}
-@media(max-width:760px){#tableWrap thead,#tableWrap thead th{top:76px!important}}
-
-/* Los menús de filtros deben superponerse a la cabecera fija de resultados */
-#filterPanel,.filter-panel{position:relative!important;z-index:210!important;overflow:visible!important}
-.filter-grid,.filter-field,.filter-multi,.group-menu-wrap{overflow:visible!important}
-.filter-multi-menu,.group-menu{z-index:230!important}
-#tableWrap thead,#tableWrap thead th{z-index:90!important}
-
-/* Filtros fijos debajo de la barra superior; encabezados debajo de filtros */
-#filterPanel.filter-panel:not([hidden]){position:sticky!important;top:76px!important;z-index:210!important;background:#fff!important;box-shadow:0 8px 20px #12314b20!important}
-#tableWrap thead,#tableWrap thead th{top:calc(76px + var(--oc-filter-sticky-height, 0px) + 6px)!important}
-@media(max-width:760px){#filterPanel.filter-panel:not([hidden]){top:76px!important}#tableWrap thead,#tableWrap thead th{top:calc(76px + var(--oc-filter-sticky-height, 0px) + 6px)!important}}
-
-/* Barra de herramientas y filtros inmovilizados como un único bloque */
-#resultsTools.results-tools:not([hidden]){position:sticky!important;top:76px!important;z-index:310!important;background:#f2f7fa!important;padding:8px 0!important;margin-top:12px!important;margin-bottom:0!important;overflow:visible!important}
-#resultsTools .tool-actions,#resultsTools .export-wrap{position:relative;z-index:320!important;overflow:visible!important}
+/* Layout unificado de resultados: una sola región de scroll para toda la tabla. */
+#resultsTools.results-tools:not([hidden]){
+  position:sticky!important;top:76px!important;z-index:310!important;
+  background:#f2f7fa!important;padding:8px 0!important;
+  margin-top:12px!important;margin-bottom:0!important;overflow:visible!important;
+}
+#resultsTools .tool-actions,#resultsTools .export-wrap{position:relative;overflow:visible!important}
 #resultsTools .columns-popover,#resultsTools .export-menu{z-index:350!important}
-#filterPanel.filter-panel:not([hidden]){top:calc(76px + var(--oc-tools-sticky-height, 0px))!important;z-index:210!important}
-#tableWrap thead,#tableWrap thead th{top:calc(76px + var(--oc-tools-sticky-height, 0px) + var(--oc-filter-sticky-height, 0px) + 6px)!important}
-
-/* Tabla contenida: evita que la última columna se salga de la página.
-   Desplazamiento dentro de la tabla y encabezados pegados a su área visible. */
+#filterPanel.filter-panel:not([hidden]){
+  position:sticky!important;
+  top:calc(76px + var(--oc-tools-sticky-height, 0px))!important;
+  z-index:210!important;background:#fff!important;
+  overflow:visible!important;box-shadow:0 8px 20px #12314b20!important;
+}
+.filter-grid,.filter-field,.filter-multi,.group-menu-wrap{overflow:visible!important}
+.filter-multi-menu,.group-menu,.status-filter-panel,.multi-select-menu{z-index:230!important}
 #tableWrap.table-wrap:not([hidden]){
-  display:block!important;
-  width:100%!important;
-  max-width:100%!important;
-  max-height:calc(100vh - 240px);
-  min-height:180px;
-  overflow:auto!important;
-  overscroll-behavior:contain;
-  border-radius:10px;
+  display:block!important;width:100%!important;max-width:100%!important;
+  max-height:calc(100vh - 240px);min-height:180px;
+  overflow:auto!important;overscroll-behavior:contain;border-radius:10px;
 }
 #tableWrap table{
-  width:max-content!important;
-  min-width:100%!important;
-  border-collapse:separate!important;
-  border-spacing:0!important;
+  width:max-content!important;min-width:100%!important;
+  border-collapse:separate!important;border-spacing:0!important;
 }
 #tableWrap thead{position:static!important}
-#tableWrap thead th{
-  position:sticky!important;
-  top:0!important;
-  z-index:12!important;
-  background:#f8fafc!important;
+#tableWrap thead th,
+#tableWrap thead th.tracking-state-col{
+  position:sticky!important;top:0!important;z-index:12!important;
+  background:#f8fafc!important;box-shadow:0 2px 0 #dce5ee!important;
+}
+#tableWrap tbody td.tracking-state-cell{
+  position:static!important;box-shadow:none!important;
+  background:inherit!important;
 }
 #tableWrap th.tracking-state-col,#tableWrap td.tracking-state-cell{
-  position:static!important;
-  background:transparent!important;
-  box-shadow:none!important;
+  min-width:145px!important;width:145px!important;max-width:145px!important;
 }
-#tableWrap thead th.tracking-state-col{
-  position:sticky!important;
-  top:0!important;
-  background:#f8fafc!important;
-}
+#tableWrap th:first-child,#tableWrap td:first-child{min-width:38px!important;width:38px!important;max-width:38px!important}
+#tableWrap th[data-col-key="ver_oc"],#tableWrap td[data-col-key="ver_oc"]{min-width:90px!important;width:90px!important}
+#tableWrap th[data-col-key="ver_entregables"],#tableWrap td[data-col-key="ver_entregables"]{min-width:85px!important;width:85px!important}
 @media(max-width:760px){#tableWrap.table-wrap:not([hidden]){max-height:65vh}}
 </style>
 </head>
