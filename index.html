@@ -500,6 +500,17 @@ header #userEmail,header #sessionUser{display:none!important}
 #tableWrap th[data-col-key="ver_oc"],#tableWrap td[data-col-key="ver_oc"]{min-width:90px!important;width:90px!important}
 #tableWrap th[data-col-key="ver_entregables"],#tableWrap td[data-col-key="ver_entregables"]{min-width:85px!important;width:85px!important}
 @media(max-width:760px){#tableWrap.table-wrap:not([hidden]){max-height:65vh}}
+
+/* Márgenes laterales uniformes: 20px por lado (+25% respecto a 16px). */
+@media (min-width: 761px) {
+  body:not(.login-sidebar-hidden):not(:has(#modalCompactFlag)) main {
+    box-sizing:border-box!important;
+    width:calc(100% - 40px)!important;
+    max-width:none!important;
+    margin-left:20px!important;
+    margin-right:20px!important;
+  }
+}
 </style>
 </head>
 <body>
