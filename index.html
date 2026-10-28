@@ -455,6 +455,8 @@ header #userEmail,header #sessionUser{display:none!important}
 #filterAreaMenu .filter-multi-option input[type=checkbox],#filterDeliverablesMenu .filter-multi-option input[type=checkbox],#filterStatusOptions label input[type=checkbox]{order:0!important;position:relative!important;display:inline-block!important;vertical-align:middle!important;width:30px!important;min-width:30px!important;max-width:30px!important;height:17px!important;min-height:17px!important;max-height:17px!important;margin:0!important;flex:0 0 30px!important}
 #filterAreaMenu .filter-multi-option span,#filterDeliverablesMenu .filter-multi-option span,#filterStatusOptions label span{order:1!important;display:inline!important;flex:1 1 auto!important;width:auto!important;margin:0!important;white-space:normal!important;line-height:1.35!important}
 #filterAreaMenu .filter-multi-option,#filterDeliverablesMenu .filter-multi-option{justify-content:flex-start!important}
+
+#viewModeField #viewMode{display:none!important}.group-menu-wrap{position:relative}.group-menu{position:absolute;top:calc(100% + 6px);left:0;width:100%;min-width:200px;background:#fff;border:1px solid #cbdbe5;border-radius:12px;padding:6px;box-shadow:0 12px 32px #18354b30;z-index:105}.group-menu[hidden]{display:none!important}.group-menu button{display:block;width:100%;border:0;border-radius:7px;background:transparent;padding:11px 12px;text-align:left;font-size:12px;font-weight:600;color:#17365d;cursor:pointer}.group-menu button:hover{background:#eef7fa}.group-menu button.selected{background:#e1f4f4;color:#087f8c;font-weight:800}
 </style>
 </head>
 <body>
@@ -586,6 +588,7 @@ header #userEmail,header #sessionUser{display:none!important}
                 <option value="monto">Monto</option>
                 <option value="area">Área usuaria</option>
               </select>
+              <div class="group-menu-wrap"><button id="viewModeButton" class="filter-multi-btn" type="button" aria-expanded="false" aria-controls="viewModeMenu">Sin agrupar <span>▾</span></button><div id="viewModeMenu" class="group-menu" hidden><button type="button" data-group-value="list">Sin agrupar</button><button type="button" data-group-value="locador">Locador</button><button type="button" data-group-value="ruc">RUC</button><button type="button" data-group-value="monto">Monto</button><button type="button" data-group-value="area">Área usuaria</button></div></div>
             </div>
             <div class="filter-field" data-filter-col="ver_credito"><label>Crédito presupuestal</label>
               <div id="periodMulti" class="multi-select">
@@ -740,6 +743,13 @@ header #userEmail,header #sessionUser{display:none!important}
     const filterPanel = $('#filterPanel');
     const exportMenu = $('#exportMenu');
     const viewMode = $('#viewMode');
+    const viewModeButton=$('#viewModeButton'),viewModeMenu=$('#viewModeMenu');
+    function syncViewModeButton(){const option=viewMode.selectedOptions[0];viewModeButton.innerHTML=(option?option.textContent:'Sin agrupar')+' <span>▾</span>';viewModeMenu.querySelectorAll('[data-group-value]').forEach(b=>b.classList.toggle('selected',b.dataset.groupValue===viewMode.value));}
+    viewModeButton.addEventListener('click',()=>{viewModeMenu.hidden=!viewModeMenu.hidden;viewModeButton.setAttribute('aria-expanded',String(!viewModeMenu.hidden));syncViewModeButton()});
+    viewModeMenu.addEventListener('click',event=>{const option=event.target.closest('[data-group-value]');if(!option)return;viewMode.value=option.dataset.groupValue;viewMode.dispatchEvent(new Event('change',{bubbles:true}));viewModeMenu.hidden=true;viewModeButton.setAttribute('aria-expanded','false');syncViewModeButton()});
+    viewMode.addEventListener('change',syncViewModeButton);
+    document.addEventListener('click',event=>{if(!event.target.closest('.group-menu-wrap')){viewModeMenu.hidden=true;viewModeButton.setAttribute('aria-expanded','false')}});
+    syncViewModeButton();
     const detailOverlay = $('#detailOverlay');
     const detailGrid = $('#detailGrid');
     const detailSubtitle = $('#detailSubtitle');
