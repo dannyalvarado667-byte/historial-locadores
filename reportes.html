@@ -428,6 +428,17 @@ body>header .header-profile,header.topbar .header-profile,header.top .header-pro
 
 /* El correo ya se muestra dentro de la tarjeta del perfil */
 header #userEmail,header #sessionUser{display:none!important}
+
+/* Márgenes laterales uniformes: 20px por lado (+25% respecto a 16px). */
+@media (min-width: 761px) {
+  body:not(.login-sidebar-hidden):not(:has(#modalCompactFlag)) main {
+    box-sizing:border-box!important;
+    width:calc(100% - 40px)!important;
+    max-width:none!important;
+    margin-left:20px!important;
+    margin-right:20px!important;
+  }
+}
 </style>
 </head>
 <body class="report-page">
