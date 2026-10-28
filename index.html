@@ -639,6 +639,7 @@ header #userEmail,header #sessionUser{display:none!important}
                 <th data-col-key="ver_oc" class="sortable" data-sort-key="numero_oc" tabindex="0">N.° OC</th>
                 <th data-col-key="ver_expediente" class="sortable" data-sort-key="expediente" tabindex="0">Expediente SGD</th>
                 <th data-col-key="ver_monto" class="sortable" data-sort-key="monto_total" tabindex="0">Monto total</th>
+                <th data-col-key="ver_fecha_emision" class="sortable" data-sort-key="fecha_emision" tabindex="0">Fecha de emisión OC</th>
                 <th data-col-key="ver_fecha_inicio" class="sortable" data-sort-key="fecha_inicio" tabindex="0">Fecha inicio OC</th>
                 <th data-col-key="ver_fecha_termino" class="sortable" data-sort-key="fecha_termino" tabindex="0">Fecha de término OC</th>
                 <th data-col-key="ver_plazo" class="sortable" data-sort-key="plazo" tabindex="0">Plazo de ejecución en días</th>
@@ -810,7 +811,7 @@ header #userEmail,header #sessionUser{display:none!important}
     let currentSearchMode = 'locador';
     let selectedPeriods = new Set();
     const columnDefs = [
-      ['ver_nombre','Apellidos y nombres'],['ver_ruc','RUC'],['ver_oc','N.° OC'],['ver_expediente','Expediente SGD'],
+      ['ver_nombre','Apellidos y nombres'],['ver_ruc','RUC'],['ver_oc','N.° OC'],['ver_fecha_emision','Fecha de emisión OC'],['ver_expediente','Expediente SGD'],
       ['ver_monto','Monto total'],['ver_fecha_inicio','Fecha inicio OC'],['ver_fecha_termino','Fecha de término OC'],
       ['ver_plazo','Plazo de ejecución en días'],['ver_area','Área usuaria'],['ver_entregables','# Entregables'],
       ['ver_status','Status'],['ver_credito','Crédito presupuestal'],['ver_tracking','Estado del entregable']
@@ -826,7 +827,7 @@ header #userEmail,header #sessionUser{display:none!important}
       if (key === 'tracking_alerta') return String(trackingStatusByOc.get(String(row.numero_oc||'')+'|'+String(row.periodo||''))?.alerta||'SIN SEGUIMIENTO').trim();
       if (key === 'plazo') return executionDaysNumber(row.fecha_inicio,row.fecha_termino) ?? -Infinity;
       if (key === 'monto_total' || key === 'numero_entregables') return Number(row[key] ?? -Infinity);
-      if (key === 'fecha_inicio' || key === 'fecha_termino') return row[key] || '';
+      if (key === 'fecha_emision' || key === 'fecha_inicio' || key === 'fecha_termino') return row[key] || '';
       return String(row[key] ?? '').trim();
     }
     function applySort(rows) {
@@ -1301,6 +1302,7 @@ header #userEmail,header #sessionUser{display:none!important}
       const vals = {
         ver_nombre:'<td class="person"><button class="person-link" type="button" data-detail-index="'+visibleRows.indexOf(row)+'">'+escapeHTML(row.apellidos_nombres)+'</button></td>',
         ver_ruc:'<td class="mono">'+escapeHTML(row.ruc)+'</td>', ver_oc:'<td class="mono">'+escapeHTML(row.numero_oc)+'</td>',
+        ver_fecha_emision:'<td class="mono">'+escapeHTML(formatDate(row.fecha_emision))+'</td>',
         ver_expediente:'<td class="mono">'+formatExpedientes(row.expediente)+'</td>', ver_monto:'<td class="mono">'+escapeHTML(formatMoney(row.monto_total))+'</td>',
         ver_fecha_inicio:'<td class="mono">'+escapeHTML(formatDate(row.fecha_inicio))+'</td>', ver_fecha_termino:'<td class="mono">'+escapeHTML(formatDate(row.fecha_termino))+'</td>',
         ver_plazo:'<td class="mono">'+escapeHTML(executionDays(row.fecha_inicio,row.fecha_termino))+'</td>', ver_area:'<td>'+escapeHTML(row.subgerencia||'—')+'</td>',
