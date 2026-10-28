@@ -457,6 +457,13 @@ header #userEmail,header #sessionUser{display:none!important}
 #filterAreaMenu .filter-multi-option,#filterDeliverablesMenu .filter-multi-option{justify-content:flex-start!important}
 
 #viewModeField #viewMode{display:none!important}.group-menu-wrap{position:relative}.group-menu{position:absolute;top:calc(100% + 6px);left:0;width:100%;min-width:200px;background:#fff;border:1px solid #cbdbe5;border-radius:12px;padding:6px;box-shadow:0 12px 32px #18354b30;z-index:105}.group-menu[hidden]{display:none!important}.group-menu button{display:block;width:100%;border:0;border-radius:7px;background:transparent;padding:11px 12px;text-align:left;font-size:11px;font-weight:800;color:#53647c;cursor:pointer;text-transform:uppercase;letter-spacing:0;line-height:1.35}.group-menu button:hover{background:#eef7fa}.group-menu button.selected{background:#e1f4f4;color:#087f8c;font-weight:800}
+
+/* Mantener visibles los encabezados de la tabla al desplazar la página */
+#tableWrap{overflow:visible!important}
+#tableWrap table{border-collapse:separate!important;border-spacing:0!important}
+#tableWrap thead{position:sticky;top:76px;z-index:90}
+#tableWrap thead th{position:sticky!important;top:76px!important;z-index:90!important;background:#f8fafc!important;box-shadow:0 2px 0 #dce5ee!important}
+@media(max-width:760px){#tableWrap thead,#tableWrap thead th{top:76px!important}}
 </style>
 </head>
 <body>
