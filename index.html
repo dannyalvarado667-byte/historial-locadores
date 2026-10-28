@@ -449,6 +449,12 @@ header #userEmail,header #sessionUser{display:none!important}
 
 /* Interruptores consistentes con el panel Columnas */
 #filterStatusOptions label{justify-content:space-between!important}#filterStatusOptions label span{flex:1}#filterStatusOptions input[type=checkbox],#periodMultiMenu input[type=checkbox]{appearance:none;width:30px!important;height:17px!important;min-width:30px;border-radius:20px;background:#cbd5e1;position:relative;cursor:pointer;flex-shrink:0}#filterStatusOptions input[type=checkbox]:before,#periodMultiMenu input[type=checkbox]:before{content:'';position:absolute;top:3px;left:3px;width:11px;height:11px;background:white;border-radius:50%;transition:transform .15s}#filterStatusOptions input[type=checkbox]:checked,#periodMultiMenu input[type=checkbox]:checked{background:#087f8c}#filterStatusOptions input[type=checkbox]:checked:before,#periodMultiMenu input[type=checkbox]:checked:before{transform:translateX(13px)}
+
+/* Interruptores horizontales y etiquetas a la derecha, igual que Crédito presupuestal */
+#filterAreaMenu .filter-multi-option,#filterDeliverablesMenu .filter-multi-option,#filterStatusOptions label{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:flex-start!important;gap:9px!important;min-height:36px!important;padding:8px 5px!important}
+#filterAreaMenu .filter-multi-option input[type=checkbox],#filterDeliverablesMenu .filter-multi-option input[type=checkbox],#filterStatusOptions label input[type=checkbox]{order:0!important;position:relative!important;display:inline-block!important;vertical-align:middle!important;width:30px!important;min-width:30px!important;max-width:30px!important;height:17px!important;min-height:17px!important;max-height:17px!important;margin:0!important;flex:0 0 30px!important}
+#filterAreaMenu .filter-multi-option span,#filterDeliverablesMenu .filter-multi-option span,#filterStatusOptions label span{order:1!important;display:inline!important;flex:1 1 auto!important;width:auto!important;margin:0!important;white-space:normal!important;line-height:1.35!important}
+#filterAreaMenu .filter-multi-option,#filterDeliverablesMenu .filter-multi-option{justify-content:flex-start!important}
 </style>
 </head>
 <body>
