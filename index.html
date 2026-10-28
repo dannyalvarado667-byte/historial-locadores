@@ -470,6 +470,11 @@ header #userEmail,header #sessionUser{display:none!important}
 .filter-grid,.filter-field,.filter-multi,.group-menu-wrap{overflow:visible!important}
 .filter-multi-menu,.group-menu{z-index:230!important}
 #tableWrap thead,#tableWrap thead th{z-index:90!important}
+
+/* Filtros fijos debajo de la barra superior; encabezados debajo de filtros */
+#filterPanel.filter-panel:not([hidden]){position:sticky!important;top:76px!important;z-index:210!important;background:#fff!important;box-shadow:0 8px 20px #12314b20!important}
+#tableWrap thead,#tableWrap thead th{top:calc(76px + var(--oc-filter-sticky-height, 0px) + 6px)!important}
+@media(max-width:760px){#filterPanel.filter-panel:not([hidden]){top:76px!important}#tableWrap thead,#tableWrap thead th{top:calc(76px + var(--oc-filter-sticky-height, 0px) + 6px)!important}}
 </style>
 </head>
 <body>
@@ -755,6 +760,19 @@ header #userEmail,header #sessionUser{display:none!important}
     const resultsTools = $('#resultsTools');
     const filterPanel = $('#filterPanel');
     const exportMenu = $('#exportMenu');
+
+    // Mantener el encabezado de resultados debajo de los filtros inmovilizados.
+    const stickyFilterPanel=document.getElementById('filterPanel');
+    function syncStickyFilterHeight(){
+      const h=stickyFilterPanel && !stickyFilterPanel.hidden ? stickyFilterPanel.getBoundingClientRect().height : 0;
+      document.documentElement.style.setProperty('--oc-filter-sticky-height',Math.ceil(h)+'px');
+    }
+    if(stickyFilterPanel){
+      if(typeof ResizeObserver!=='undefined')new ResizeObserver(syncStickyFilterHeight).observe(stickyFilterPanel);
+      new MutationObserver(syncStickyFilterHeight).observe(stickyFilterPanel,{attributes:true,attributeFilter:['hidden','style','class']});
+      window.addEventListener('resize',syncStickyFilterHeight);
+      syncStickyFilterHeight();
+    }
     const viewMode = $('#viewMode');
     const viewModeButton=$('#viewModeButton'),viewModeMenu=$('#viewModeMenu');
     function syncViewModeButton(){const option=viewMode.selectedOptions[0];viewModeButton.innerHTML=(option?option.textContent:'Sin agrupar')+' <span>▾</span>';viewModeMenu.querySelectorAll('[data-group-value]').forEach(b=>b.classList.toggle('selected',b.dataset.groupValue===viewMode.value));}
