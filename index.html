@@ -556,7 +556,7 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
               </div>
             </div>
             <div class="filter-field" data-filter-col="ver_area"><label for="filterArea">Área usuaria</label><select id="filterArea"><option value="">Todas</option></select></div>
-            <div class="filter-field" data-filter-col="ver_status"><label for="filterStatus">Status</label><select id="filterStatus"><option value="">Todas</option></select></div>
+            <div class="filter-field" data-filter-col="ver_tracking"><label for="filterStatus">Estado del entregable</label><select id="filterStatus"><option value="">Todas</option></select></div>
             <div class="filter-field" data-filter-col="ver_entregables"><label for="filterDeliverables">Entregables</label><select id="filterDeliverables"><option value="">Todos</option></select></div>
             <div class="filter-field filter-oc-field" data-filter-col="ver_oc"><label for="filterOc">N.° OC</label><input id="filterOc" type="text" inputmode="numeric" placeholder="Filtrar OC"></div>
           </div>
@@ -1142,22 +1142,19 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
         periods.map(v => '<label class="multi-option"><input type="checkbox" data-period-value="' + escapeHTML(v) + '" ' + (selectedPeriods.has(String(v)) ? 'checked' : '') + '> <span>' + escapeHTML(v) + '</span></label>').join('');
       updatePeriodButton();
       fillSelect('#filterArea', uniqueValues('subgerencia'), 'Todas');
-      fillSelect('#filterStatus', uniqueValues('estado_oc'), 'Todas');
-      [...$('#filterStatus').options].forEach(option => {
-        if (option.value === 'ACTIVO') option.textContent = 'SIN INCIDENCIA';
-      });
+      fillSelect('#filterStatus', [...new Set(allRows.map(row => trackingStatusByOc.get(String(row.numero_oc||'')+'|'+String(row.periodo||''))?.alerta||'SIN SEGUIMIENTO'))].sort((a,b)=>String(a).localeCompare(String(b),'es')), 'Todos');
       fillSelect('#filterDeliverables', uniqueValues('numero_entregables'), 'Todos');
     }
 
     function applyFilters() {
       const area = currentColumns.ver_area === false ? '' : $('#filterArea').value;
-      const status = currentColumns.ver_status === false ? '' : $('#filterStatus').value;
+      const status = currentColumns.ver_tracking === false ? '' : $('#filterStatus').value;
       const deliverables = currentColumns.ver_entregables === false ? '' : $('#filterDeliverables').value;
       const oc = currentColumns.ver_oc === false ? '' : $('#filterOc').value.trim();
       visibleRows = allRows.filter(row =>
         (currentColumns.ver_credito === false || selectedPeriods.size === 0 || selectedPeriods.has(String(row.periodo ?? ''))) &&
         (!area || String(row.subgerencia ?? '') === area) &&
-        (!status || String(row.estado_oc ?? '') === status) &&
+        (!status || String(trackingStatusByOc.get(String(row.numero_oc||'')+'|'+String(row.periodo||''))?.alerta||'SIN SEGUIMIENTO') === status) &&
         (!deliverables || String(row.numero_entregables ?? '') === deliverables) &&
         (!oc || String(row.numero_oc ?? '').includes(oc))
       );
