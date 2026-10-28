@@ -513,7 +513,8 @@ async function init(){
   const {data:{session},error}=await supabase.auth.getSession(); if(error)throw error;
   if(!session?.user){location.replace('./');return}
   $('#userEmail').textContent=session.user.email||'';
-  const {data:p,error:pe}=await supabase.from('app_users').select('rol,activo').eq('user_id',session.user.id).maybeSingle(); if(pe)throw pe;
+  const {data:p,error:pe}=await supabase.from('app_users').select('rol,activo,nombre_completo').eq('user_id',session.user.id).maybeSingle(); if(pe)throw pe;
+  const card=document.querySelector('header .header-profile');if(card){const name=(p?.nombre_completo||'').trim()||session.user.email?.split('@')[0]||'Mi cuenta';card.querySelector('strong').textContent=name;card.querySelector('small').textContent=session.user.email||'';card.querySelector('.header-profile-avatar').textContent=name.charAt(0).toUpperCase();}
   if(!p?.activo||p.rol!=='ADMINISTRADOR'){ $('#adminGate').innerHTML='<h2>Acceso no autorizado</h2><p>Esta sección está disponible únicamente para administradores.</p><a class="btn btn-primary back-link" href="./">Volver al historial</a>';return}
   $('#adminGate').hidden=true; $('#adminContent').hidden=false; await loadUsers();
  }catch(e){ $('#adminGate').innerHTML='<h2>No se pudo cargar Administración</h2><p>'+esc(e.message||e)+'</p><a class="btn btn-primary back-link" href="./">Volver al historial</a>'}
