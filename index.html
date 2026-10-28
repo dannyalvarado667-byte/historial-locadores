@@ -435,6 +435,12 @@ header #userEmail,header #sessionUser{display:none!important}
 
 /* Columna N.° siempre compacta, incluso con columnas ocultas */
 #tableWrap table{width:max-content!important;min-width:max-content!important;table-layout:auto!important}#tableWrap th.visual-row-number,#tableWrap td.visual-row-number{width:42px!important;min-width:42px!important;max-width:42px!important;box-sizing:border-box!important;padding:7px 4px!important;text-align:center!important}#tableWrap th.visual-row-number{white-space:nowrap!important}#tableWrap th[data-col-key="ver_nombre"]{min-width:225px!important}
+
+/* Ajuste de anchos y continuidad visual de la columna de estado */
+#tableWrap th[data-col-key="ver_oc"],#tableWrap td[data-col-key="ver_oc"]{width:104px!important;min-width:104px!important;max-width:104px!important;white-space:nowrap!important}
+#tableWrap th[data-col-key="ver_entregables"],#tableWrap td[data-col-key="ver_entregables"]{width:78px!important;min-width:78px!important;max-width:78px!important;text-align:center!important}
+#tableWrap th.tracking-state-col,#tableWrap td.tracking-state-cell{position:static!important;background:inherit!important;box-shadow:none!important;border-left:0!important;min-width:145px!important;width:145px!important;max-width:145px!important}
+#tableWrap th.tracking-state-col{background:#f4f7fb!important}
 </style>
 </head>
 <body>
