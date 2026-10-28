@@ -383,6 +383,9 @@ body:not(.login-sidebar-hidden)>header,body:not(.login-sidebar-hidden)>.shell>he
 
 /* Página independiente de Reportes */
 body.report-page #appView{display:none!important}body.report-page #reportsOverlay{position:relative!important;inset:auto!important;display:block!important;background:none!important;backdrop-filter:none!important;padding:0!important;z-index:auto!important}body.report-page #reportsOverlay .reports-card{width:100%!important;max-width:1050px!important;margin:30px auto!important;max-height:none!important;overflow:visible!important;box-shadow:0 12px 36px #17365d16!important}body.report-page #reportsClose{display:none!important}body.report-page #reportsOverlay .reports-list{padding:25px!important}body.report-page #reportsOverlay .report-item{padding:24px!important}body.report-page #reportsOverlay .detail-head{padding:24px!important}
+
+/* Aprovechar el ancho disponible junto al menú lateral */
+body:not(.login-sidebar-hidden) main{max-width:none!important;width:calc(100% - 32px)!important;margin-left:16px!important;margin-right:16px!important}body:not(.login-sidebar-hidden) .admin-page{max-width:none!important;padding-left:16px!important;padding-right:16px!important}body:not(.login-sidebar-hidden) main .dashboard-head{max-width:none!important}
 </style>
 </head>
 <body class="report-page">
