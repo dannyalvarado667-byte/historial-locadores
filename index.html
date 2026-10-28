@@ -441,6 +441,11 @@ header #userEmail,header #sessionUser{display:none!important}
 #tableWrap th[data-col-key="ver_entregables"],#tableWrap td[data-col-key="ver_entregables"]{width:78px!important;min-width:78px!important;max-width:78px!important;text-align:center!important}
 #tableWrap th.tracking-state-col,#tableWrap td.tracking-state-cell{position:static!important;background:inherit!important;box-shadow:none!important;border-left:0!important;min-width:145px!important;width:145px!important;max-width:145px!important}
 #tableWrap th.tracking-state-col{background:#f4f7fb!important}
+
+/* Filtros visibles al desplazarse, debajo de la cabecera */
+#filterPanel.filter-panel{position:sticky;top:76px;z-index:80;overflow:visible!important;box-shadow:0 8px 20px #12314b14}
+.filter-multi{position:relative;min-width:0}.filter-multi-btn{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;height:42px;background:#fff;border:1px solid #cbd6e4;border-radius:9px;padding:0 12px;color:#17365d;text-align:left;font-size:12px;cursor:pointer}.filter-multi-btn span{margin-left:auto}.filter-multi-menu{position:absolute;top:calc(100% + 6px);left:0;width:max(100%,290px);max-width:340px;background:#fff;border:1px solid #cbdbe5;border-radius:14px;padding:15px;box-shadow:0 12px 32px #18354b30;z-index:100}.filter-multi-menu[hidden]{display:none!important}.filter-multi-head{display:flex;justify-content:space-between;align-items:center;color:#17365d;font-size:14px}.filter-multi-close{border:0;background:transparent;font-size:23px;color:#64748b;cursor:pointer}.filter-multi-search{box-sizing:border-box;width:100%;margin:12px 0 8px;padding:9px 11px;border:1px solid #cbdbe5;border-radius:9px}.filter-multi-options{max-height:255px;overflow:auto}.filter-multi-option{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 4px;border-bottom:1px solid #eef2f6;cursor:pointer;font-size:12px}.filter-multi-option[hidden]{display:none!important}.filter-multi-option input{appearance:none;width:30px;height:17px;flex-shrink:0;background:#cbd5e1;border-radius:20px;position:relative;cursor:pointer}.filter-multi-option input:before{content:'';position:absolute;left:3px;top:3px;width:11px;height:11px;background:white;border-radius:50%;transition:transform .15s}.filter-multi-option input:checked{background:#087f8c}.filter-multi-option input:checked:before{transform:translateX(13px)}.filter-multi-actions{display:flex;gap:8px;padding-top:12px}.filter-multi-actions button{flex:1;border:1px solid #cbdbe5;border-radius:8px;padding:9px 5px;background:#f5f9fc;color:#17365d;font-size:11px;font-weight:700;cursor:pointer}
+@media(max-width:850px){#filterPanel.filter-panel{position:relative;top:auto}.filter-multi-menu{width:min(300px,80vw)}}
 </style>
 </head>
 <body>
@@ -579,9 +584,9 @@ header #userEmail,header #sessionUser{display:none!important}
                 <div id="periodMultiMenu" class="multi-select-menu" hidden></div>
               </div>
             </div>
-            <div class="filter-field" data-filter-col="ver_area"><label for="filterArea">Área usuaria</label><select id="filterArea"><option value="">Todas</option></select></div>
+            <div class="filter-field" data-filter-col="ver_area"><label for="filterAreaBtn">Área usuaria</label><div class="filter-multi" id="filterAreaWrap"><button type="button" id="filterAreaBtn" class="filter-multi-btn" aria-expanded="false">Todos <span>▾</span></button><div class="filter-multi-menu" id="filterAreaMenu" hidden><div class="filter-multi-head"><strong>Área usuaria</strong><button type="button" class="filter-multi-close" aria-label="Cerrar">×</button></div><input type="search" class="filter-multi-search" placeholder="Buscar..." aria-label="Buscar Área usuaria"><div class="filter-multi-options"></div><div class="filter-multi-actions"><button type="button" data-action="all">Seleccionar todos</button><button type="button" data-action="clear">Limpiar</button></div></div></div></div>
             <div class="filter-field" data-filter-col="ver_tracking"><label for="filterStatusButton">Estado del entregable</label><div class="status-filter-wrap"><button id="filterStatusButton" type="button" aria-expanded="false" aria-controls="filterStatusPanel">Todos <span>▾</span></button><div id="filterStatusPanel" class="status-filter-panel" hidden><div class="status-filter-heading">Selecciona varios estados</div><div id="filterStatusOptions" class="status-filter-options"></div><button type="button" id="filterStatusClear">Limpiar selección</button></div></div></div>
-            <div class="filter-field" data-filter-col="ver_entregables"><label for="filterDeliverables">Entregables</label><select id="filterDeliverables"><option value="">Todos</option></select></div>
+            <div class="filter-field" data-filter-col="ver_entregables"><label for="filterDeliverablesBtn">Entregables</label><div class="filter-multi" id="filterDeliverablesWrap"><button type="button" id="filterDeliverablesBtn" class="filter-multi-btn" aria-expanded="false">Todos <span>▾</span></button><div class="filter-multi-menu" id="filterDeliverablesMenu" hidden><div class="filter-multi-head"><strong>Entregables</strong><button type="button" class="filter-multi-close" aria-label="Cerrar">×</button></div><input type="search" class="filter-multi-search" placeholder="Buscar..." aria-label="Buscar Entregables"><div class="filter-multi-options"></div><div class="filter-multi-actions"><button type="button" data-action="all">Seleccionar todos</button><button type="button" data-action="clear">Limpiar</button></div></div></div></div>
             <div class="filter-field filter-oc-field" data-filter-col="ver_oc"><label for="filterOc">N.° OC</label><input id="filterOc" type="text" inputmode="numeric" placeholder="Filtrar OC"></div>
           </div>
           <div class="filter-footer"><button id="clearFilters" class="btn btn-tool" type="button">Limpiar filtros</button></div>
@@ -986,9 +991,9 @@ header #userEmail,header #sessionUser{display:none!important}
       resultsSummary.textContent = '';
       emptyState.textContent = 'Realiza una búsqueda para visualizar el historial.';
       emptyState.hidden = false;
-      $('#filterArea').innerHTML = '<option value="">Todas</option>';
-      $('#filterStatus').innerHTML = '<option value="">Todas</option>';
-      $('#filterDeliverables').innerHTML = '<option value="">Todos</option>';
+      selectedAreas.clear();renderFilterMulti('filterArea',[]);
+      selectedTrackingStates.clear();$('#filterStatusOptions').innerHTML='';updateStatusFilterButton();
+      selectedDeliverables.clear();renderFilterMulti('filterDeliverables',[]);
       $('#filterOc').value = '';
       $('#periodMultiMenu').innerHTML = '';
       $('#periodMultiBtn').firstChild.textContent = 'Todos ';
@@ -1167,25 +1172,30 @@ header #userEmail,header #sessionUser{display:none!important}
         '<label class="multi-option"><input type="checkbox" data-period-all ' + (selectedPeriods.size === 0 ? 'checked' : '') + '> <span>Todos</span></label>' +
         periods.map(v => '<label class="multi-option"><input type="checkbox" data-period-value="' + escapeHTML(v) + '" ' + (selectedPeriods.has(String(v)) ? 'checked' : '') + '> <span>' + escapeHTML(v) + '</span></label>').join('');
       updatePeriodButton();
-      fillSelect('#filterArea', uniqueValues('subgerencia'), 'Todas');
+      renderFilterMulti('filterArea',uniqueValues('subgerencia'))
       const states=[...new Set(allRows.map(row => trackingStatusByOc.get(String(row.numero_oc||'')+'|'+String(row.periodo||''))?.alerta||'SIN SEGUIMIENTO'))].sort((a,b)=>String(a).localeCompare(String(b),'es'));
       $('#filterStatusOptions').innerHTML=states.map(state=>'<label><input type="checkbox" value="'+escapeHTML(state)+'" '+(selectedTrackingStates.has(state)?'checked':'')+'><span>'+escapeHTML(state)+'</span></label>').join('');
       updateStatusFilterButton();
-      fillSelect('#filterDeliverables', uniqueValues('numero_entregables'), 'Todos');
+      renderFilterMulti('filterDeliverables',uniqueValues('numero_entregables'))
     }
 
+    const selectedAreas=new Set(),selectedDeliverables=new Set();
+    const filterMultiValues={filterArea:[],filterDeliverables:[]};
+    function updateFilterMulti(id){const selected=id==='filterArea'?selectedAreas:selectedDeliverables;const btn=$('#'+id+'Btn');if(!btn)return;const arr=[...selected];btn.innerHTML=(arr.length===0?'Todos':arr.length===1?escapeHTML(arr[0]):arr.length+' seleccionados')+' <span>▾</span>';btn.title=arr.length?arr.join(', '):'Todos';}
+    function renderFilterMulti(id,values){filterMultiValues[id]=values.map(String);const selected=id==='filterArea'?selectedAreas:selectedDeliverables;for(const v of [...selected])if(!filterMultiValues[id].includes(v))selected.delete(v);const box=$('#'+id+'Menu .filter-multi-options');if(!box)return;box.innerHTML=filterMultiValues[id].map(v=>'<label class="filter-multi-option"><span>'+escapeHTML(v)+'</span><input type="checkbox" value="'+escapeHTML(v)+'" '+(selected.has(v)?'checked':'')+'></label>').join('');updateFilterMulti(id);}
+    for(const id of ['filterArea','filterDeliverables']){const wrap=$('#'+id+'Wrap'),menu=$('#'+id+'Menu'),btn=$('#'+id+'Btn'),selected=id==='filterArea'?selectedAreas:selectedDeliverables;btn.addEventListener('click',()=>{const opening=menu.hidden;document.querySelectorAll('.filter-multi-menu').forEach(el=>el.hidden=true);menu.hidden=!opening;btn.setAttribute('aria-expanded',String(opening))});menu.querySelector('.filter-multi-close').addEventListener('click',()=>{menu.hidden=true;btn.setAttribute('aria-expanded','false')});menu.querySelector('.filter-multi-search').addEventListener('input',e=>{const term=e.target.value.toLocaleLowerCase('es');menu.querySelectorAll('.filter-multi-option').forEach(el=>el.hidden=!el.textContent.toLocaleLowerCase('es').includes(term))});menu.addEventListener('change',e=>{if(!e.target.matches('input[type=checkbox]'))return;e.target.checked?selected.add(e.target.value):selected.delete(e.target.value);updateFilterMulti(id);applyFilters()});menu.querySelector('[data-action=all]').addEventListener('click',()=>{filterMultiValues[id].forEach(v=>selected.add(v));renderFilterMulti(id,filterMultiValues[id]);applyFilters()});menu.querySelector('[data-action=clear]').addEventListener('click',()=>{selected.clear();renderFilterMulti(id,filterMultiValues[id]);applyFilters()});document.addEventListener('click',e=>{if(!wrap.contains(e.target)){menu.hidden=true;btn.setAttribute('aria-expanded','false')}})}
     const selectedTrackingStates=new Set();
     function updateStatusFilterButton(){const btn=$('#filterStatusButton');const count=selectedTrackingStates.size;btn.innerHTML=(count===0?'Todos':count===1?escapeHTML([...selectedTrackingStates][0]):count+' estados seleccionados')+' <span>▾</span>';btn.title=count?[...selectedTrackingStates].join(', '):'Todos los estados';}
     function applyFilters() {
-      const area = currentColumns.ver_area === false ? '' : $('#filterArea').value;
+      const area = currentColumns.ver_area === false ? [] : [...selectedAreas];
       const status = currentColumns.ver_tracking === false ? [] : [...selectedTrackingStates];
-      const deliverables = currentColumns.ver_entregables === false ? '' : $('#filterDeliverables').value;
+      const deliverables = currentColumns.ver_entregables === false ? [] : [...selectedDeliverables];
       const oc = currentColumns.ver_oc === false ? '' : $('#filterOc').value.trim();
       visibleRows = allRows.filter(row =>
         (currentColumns.ver_credito === false || selectedPeriods.size === 0 || selectedPeriods.has(String(row.periodo ?? ''))) &&
-        (!area || String(row.subgerencia ?? '') === area) &&
+        (area.length===0 || area.includes(String(row.subgerencia ?? ''))) &&
         (status.length===0 || status.includes(String(trackingStatusByOc.get(String(row.numero_oc||'')+'|'+String(row.periodo||''))?.alerta||'SIN SEGUIMIENTO'))) &&
-        (!deliverables || String(row.numero_entregables ?? '') === deliverables) &&
+        (deliverables.length===0 || deliverables.includes(String(row.numero_entregables ?? ''))) &&
         (!oc || String(row.numero_oc ?? '').includes(oc))
       );
       applySort(visibleRows);
@@ -1403,7 +1413,7 @@ header #userEmail,header #sessionUser{display:none!important}
     $('#filterOc').addEventListener('input', applyFilters);
     $('#clearFilters').addEventListener('click', () => {
       selectedPeriods.clear();
-      ['#filterArea','#filterDeliverables','#filterOc'].forEach(sel => $(sel).value = '');selectedTrackingStates.clear();updateStatusFilterButton();
+      $('#filterOc').value='';selectedAreas.clear();selectedDeliverables.clear();selectedTrackingStates.clear();updateStatusFilterButton();
       sortKey = null;
       sortDir = 'asc';
       updateSortHeaders();
