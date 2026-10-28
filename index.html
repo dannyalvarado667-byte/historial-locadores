@@ -578,7 +578,7 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
                 <th data-col-key="ver_area" class="sortable" data-sort-key="subgerencia" tabindex="0">Área usuaria</th>
                 <th data-col-key="ver_entregables" class="sortable" data-sort-key="numero_entregables" tabindex="0"># Entregables</th>
                 <th data-col-key="ver_status" class="sortable" data-sort-key="estado_oc" tabindex="0">Status</th>
-                <th data-col-key="ver_credito" class="sortable" data-sort-key="periodo" tabindex="0">Crédito presupuestal</th><th class="tracking-state-col" data-col-key="ver_tracking">Estado del entregable</th>
+                <th data-col-key="ver_credito" class="sortable" data-sort-key="periodo" tabindex="0">Crédito presupuestal</th><th class="tracking-state-col sortable" data-col-key="ver_tracking" data-sort-key="tracking_alerta" tabindex="0">Estado del entregable</th>
               </tr>
             </thead>
             <tbody id="resultsBody"></tbody>
@@ -724,6 +724,7 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
     let sortDir = 'asc';
 
     function sortValue(row, key) {
+      if (key === 'tracking_alerta') return String(trackingStatusByOc.get(String(row.numero_oc||'')+'|'+String(row.periodo||''))?.alerta||'SIN SEGUIMIENTO').trim();
       if (key === 'plazo') return executionDaysNumber(row.fecha_inicio,row.fecha_termino) ?? -Infinity;
       if (key === 'monto_total' || key === 'numero_entregables') return Number(row[key] ?? -Infinity);
       if (key === 'fecha_inicio' || key === 'fecha_termino') return row[key] || '';
