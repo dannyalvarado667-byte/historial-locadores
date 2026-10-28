@@ -464,6 +464,12 @@ header #userEmail,header #sessionUser{display:none!important}
 #tableWrap thead{position:sticky;top:76px;z-index:90}
 #tableWrap thead th{position:sticky!important;top:76px!important;z-index:90!important;background:#f8fafc!important;box-shadow:0 2px 0 #dce5ee!important}
 @media(max-width:760px){#tableWrap thead,#tableWrap thead th{top:76px!important}}
+
+/* Los menús de filtros deben superponerse a la cabecera fija de resultados */
+#filterPanel,.filter-panel{position:relative!important;z-index:210!important;overflow:visible!important}
+.filter-grid,.filter-field,.filter-multi,.group-menu-wrap{overflow:visible!important}
+.filter-multi-menu,.group-menu{z-index:230!important}
+#tableWrap thead,#tableWrap thead th{z-index:90!important}
 </style>
 </head>
 <body>
