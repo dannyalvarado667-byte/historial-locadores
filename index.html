@@ -417,6 +417,9 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
 
 /* Selector de columnas estilo Airtable */
 .columns-popover{width:320px!important;right:0!important;padding:17px!important;border-radius:14px!important}.columns-popover-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.columns-popover-head strong{font-size:15px!important}.columns-popover-head button{border:0;background:transparent;color:#64748b;font-size:24px;cursor:pointer;padding:0 4px}#columnsSearch{width:100%;margin-top:12px;border:1px solid #cbdbe5;border-radius:9px;padding:10px 12px;font-size:13px}.columns-choices{max-height:350px!important;margin:10px 0!important;gap:0!important}.columns-choices label{display:flex;justify-content:space-between;gap:12px;padding:10px 3px;border-bottom:1px solid #eef2f6;font-size:12px!important}.columns-choices label span{flex:1}.columns-choices input[type=checkbox]{appearance:none;width:34px;height:20px;flex:0 0 34px;border-radius:20px;background:#c8d4df;position:relative;cursor:pointer;transition:background .15s}.columns-choices input[type=checkbox]:checked{background:#087f8c}.columns-choices input[type=checkbox]:before{content:"";position:absolute;width:14px;height:14px;border-radius:50%;top:3px;left:3px;background:#fff;box-shadow:0 1px 3px #0003;transition:transform .15s}.columns-choices input[type=checkbox]:checked:before{transform:translateX(14px)}.columns-popover-actions{display:flex;justify-content:space-between;gap:8px;padding-top:9px}.columns-popover-actions button{flex:1;border:1px solid #cbdbe5;border-radius:8px;padding:9px 7px;background:#f6f9fc;color:#17365d;font-size:12px;font-weight:700;cursor:pointer}.columns-popover-actions button:last-child{background:#e4f5f5;border-color:#b9dfe1}.columns-empty{font-size:12px;color:#64748b;padding:12px 0}
+
+/* Numeración consecutiva visual de las órdenes filtradas */
+#tableWrap th.visual-row-number,#tableWrap td.visual-row-number{width:48px!important;min-width:48px!important;max-width:48px!important;text-align:center!important;white-space:nowrap!important;font-size:11px!important;font-variant-numeric:tabular-nums;color:#61758b;padding:9px 5px!important}#tableWrap th.visual-row-number{font-weight:800;color:#17365d}
 </style>
 </head>
 <body>
@@ -567,6 +570,7 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
           <table>
             <thead>
               <tr>
+                <th class="visual-row-number">N.°</th>
                 <th data-col-key="ver_nombre" class="sortable" data-sort-key="apellidos_nombres" tabindex="0">Apellidos y nombres</th>
                 <th data-col-key="ver_ruc" class="sortable" data-sort-key="ruc" tabindex="0">RUC</th>
                 <th data-col-key="ver_oc" class="sortable" data-sort-key="numero_oc" tabindex="0">N.° OC</th>
@@ -1274,13 +1278,13 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
       const rowHtml = (row) => {
         const exited = row.estado_oc === 'DESISTIÓ' || row.estado_oc === 'ANULADO';
         const index = visibleRows.indexOf(row);
-        return '<tr>'+rowCells(row)+'</tr>';
+        return '<tr><td class="visual-row-number">'+(index+1)+'</td>'+rowCells(row)+'</tr>';
       };
 
       if (currentSearchMode === 'year' && viewMode.value !== 'list') {
         const ordered = groupedExportSets();
         resultsBody.innerHTML = ordered.map(rows =>
-          `<tr class="group-row"><td colspan="${visibleColumnDefs().filter(([k])=>!localHiddenColumns.has(k)).length}"><div class="group-title">${escapeHTML(groupHeading(rows))}</div></td></tr>` +
+          `<tr class="group-row"><td colspan="${visibleColumnDefs().filter(([k])=>!localHiddenColumns.has(k)).length+1}"><div class="group-title">${escapeHTML(groupHeading(rows))}</div></td></tr>` +
           rows.map(rowHtml).join('')
         ).join('');
       } else {
