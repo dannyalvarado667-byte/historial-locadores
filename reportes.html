@@ -417,6 +417,9 @@ body.report-page #reportsOverlay{padding:0!important;margin:0!important}body.rep
 
 /* Encabezado de página consistente con Seguimiento y Administración */
 body.report-page .reports-page-intro{max-width:980px;margin:20px 0 0;padding:0 2px}body.report-page .reports-page-intro .reports-eyebrow{font-size:11px;font-weight:850;letter-spacing:.15em;color:#146c87;margin:0 0 7px}body.report-page .reports-page-intro h1{font-size:clamp(26px,2.6vw,34px);line-height:1.15;color:#17365d;margin:0 0 9px;font-weight:800}body.report-page .reports-page-intro>p:last-child{color:#61758b;font-size:14px;line-height:1.55;margin:0}body.report-page #reportsOverlay .reports-card{margin-top:20px!important}@media(max-width:650px){body.report-page .reports-page-intro{margin-top:12px}}
+
+/* Evitar el espacio vacío del main oculto antes del título de Reportes */
+body.report-page:not(.login-sidebar-hidden) main{padding-top:0!important;padding-bottom:0!important;min-height:0!important;height:0!important;overflow:hidden!important}body.report-page:not(.login-sidebar-hidden) .reports-page-intro{margin-top:22px!important;margin-left:16px!important;margin-right:16px!important;max-width:980px!important}body.report-page:not(.login-sidebar-hidden) #reportsOverlay{margin-left:16px!important;margin-right:16px!important;width:calc(100% - 32px)!important}body.report-page:not(.login-sidebar-hidden) #reportsOverlay .reports-card{margin-top:18px!important}@media(max-width:650px){body.report-page:not(.login-sidebar-hidden) .reports-page-intro{margin:14px 9px 0!important}body.report-page:not(.login-sidebar-hidden) #reportsOverlay{margin-left:9px!important;margin-right:9px!important;width:calc(100% - 18px)!important}}
 </style>
 </head>
 <body class="report-page">
