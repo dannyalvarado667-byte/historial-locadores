@@ -475,6 +475,13 @@ header #userEmail,header #sessionUser{display:none!important}
 #filterPanel.filter-panel:not([hidden]){position:sticky!important;top:76px!important;z-index:210!important;background:#fff!important;box-shadow:0 8px 20px #12314b20!important}
 #tableWrap thead,#tableWrap thead th{top:calc(76px + var(--oc-filter-sticky-height, 0px) + 6px)!important}
 @media(max-width:760px){#filterPanel.filter-panel:not([hidden]){top:76px!important}#tableWrap thead,#tableWrap thead th{top:calc(76px + var(--oc-filter-sticky-height, 0px) + 6px)!important}}
+
+/* Barra de herramientas y filtros inmovilizados como un único bloque */
+#resultsTools.results-tools:not([hidden]){position:sticky!important;top:76px!important;z-index:310!important;background:#f2f7fa!important;padding:8px 0!important;margin-top:12px!important;margin-bottom:0!important;overflow:visible!important}
+#resultsTools .tool-actions,#resultsTools .export-wrap{position:relative;z-index:320!important;overflow:visible!important}
+#resultsTools .columns-popover,#resultsTools .export-menu{z-index:350!important}
+#filterPanel.filter-panel:not([hidden]){top:calc(76px + var(--oc-tools-sticky-height, 0px))!important;z-index:210!important}
+#tableWrap thead,#tableWrap thead th{top:calc(76px + var(--oc-tools-sticky-height, 0px) + var(--oc-filter-sticky-height, 0px) + 6px)!important}
 </style>
 </head>
 <body>
@@ -762,6 +769,18 @@ header #userEmail,header #sessionUser{display:none!important}
     const exportMenu = $('#exportMenu');
 
     // Mantener el encabezado de resultados debajo de los filtros inmovilizados.
+
+    const stickyResultsTools=document.getElementById('resultsTools');
+    function syncStickyToolsHeight(){
+      const h=stickyResultsTools && !stickyResultsTools.hidden ? stickyResultsTools.getBoundingClientRect().height : 0;
+      document.documentElement.style.setProperty('--oc-tools-sticky-height',Math.ceil(h)+'px');
+    }
+    if(stickyResultsTools){
+      if(typeof ResizeObserver!=='undefined')new ResizeObserver(syncStickyToolsHeight).observe(stickyResultsTools);
+      new MutationObserver(syncStickyToolsHeight).observe(stickyResultsTools,{attributes:true,attributeFilter:['hidden','style','class']});
+      window.addEventListener('resize',syncStickyToolsHeight);
+      syncStickyToolsHeight();
+    }
     const stickyFilterPanel=document.getElementById('filterPanel');
     function syncStickyFilterHeight(){
       const h=stickyFilterPanel && !stickyFilterPanel.hidden ? stickyFilterPanel.getBoundingClientRect().height : 0;
