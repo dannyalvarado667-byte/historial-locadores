@@ -411,6 +411,9 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
 
 /* Estado de seguimiento, separado del estado administrativo de la OC */
 #tableWrap .tracking-state-col{min-width:145px!important}#tableWrap .tracking-state-cell{white-space:nowrap;font-size:11px!important}.tracking-pill{display:inline-block;padding:5px 8px;border-radius:999px;font-weight:750;font-size:10px;line-height:1.2;background:#eaf1f8;color:#35526b}.tracking-pill.tracking-done{background:#def4e8;color:#14643a}.tracking-pill.tracking-pending{background:#fff0d7;color:#8a5200}.tracking-pill.tracking-out{background:#f0e8ee;color:#78506c}.tracking-pill.tracking-none{background:#eef1f5;color:#66758b}
+
+/* Tabla estable y control visual de columnas */
+#tableWrap table{table-layout:auto!important;width:100%!important;min-width:1230px!important}#tableWrap thead th{height:auto!important;max-width:none!important;min-width:75px!important;white-space:normal!important;overflow-wrap:normal!important;word-break:normal!important;vertical-align:middle!important;line-height:1.35!important;padding:11px 8px!important}#tableWrap thead th[data-col-key="ver_nombre"]{min-width:200px!important}#tableWrap thead th[data-col-key="ver_credito"]{min-width:125px!important}#tableWrap thead th.tracking-state-col{min-width:155px!important}#tableWrap .tracking-state-cell{min-width:155px!important}.results-tools .tool-actions{position:relative}.columns-popover{position:absolute;right:90px;top:calc(100% + 8px);z-index:50;background:#fff;border:1px solid #cddce7;border-radius:12px;padding:15px;width:260px;box-shadow:0 12px 32px #18354b30;color:#17365d}.columns-popover[hidden]{display:none!important}.columns-choices{display:grid;gap:7px;max-height:320px;overflow:auto;margin:12px 0}.columns-choices label{display:flex;align-items:center;gap:9px;font-size:12px;cursor:pointer}.columns-choices input{accent-color:#087f8c}.columns-popover strong{font-size:13px}@media(max-width:700px){.columns-popover{right:0;width:min(270px,85vw)}}
 </style>
 </head>
 <body>
@@ -521,7 +524,7 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
         <div id="resultsTools" class="results-tools" hidden>
           <p id="resultsSummary" class="results-summary"></p>
           <div class="tool-actions">
-        <button id="clearSearchBtn" class="btn btn-tool" type="button">Limpiar</button>
+        <button id="columnsToggleBtn" class="btn btn-tool" type="button" aria-expanded="false" aria-controls="columnsPopover">☷ Columnas</button><div id="columnsPopover" class="columns-popover" hidden><strong>Mostrar u ocultar columnas</strong><div id="columnsChoices" class="columns-choices"></div><button id="columnsRestoreBtn" class="btn btn-tool" type="button">Mostrar todas</button></div><button id="clearSearchBtn" class="btn btn-tool" type="button">Limpiar</button>
             <div class="export-wrap">
               <button id="exportBtn" class="btn btn-tool" type="button">↓ Exportar ▾</button>
               <div id="exportMenu" class="export-menu" hidden>
@@ -571,8 +574,8 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
                 <th data-col-key="ver_plazo" class="sortable" data-sort-key="plazo" tabindex="0">Plazo de ejecución en días</th>
                 <th data-col-key="ver_area" class="sortable" data-sort-key="subgerencia" tabindex="0">Área usuaria</th>
                 <th data-col-key="ver_entregables" class="sortable" data-sort-key="numero_entregables" tabindex="0"># Entregables</th>
-                <th data-col-key="ver_status" class="sortable" data-sort-key="estado_oc" tabindex="0">Status</th><th class="tracking-state-col">Estado del entregable</th>
-                <th data-col-key="ver_credito" class="sortable" data-sort-key="periodo" tabindex="0">Crédito presupuestal</th>
+                <th data-col-key="ver_status" class="sortable" data-sort-key="estado_oc" tabindex="0">Status</th>
+                <th data-col-key="ver_credito" class="sortable" data-sort-key="periodo" tabindex="0">Crédito presupuestal</th><th class="tracking-state-col" data-col-key="ver_tracking">Estado del entregable</th>
               </tr>
             </thead>
             <tbody id="resultsBody"></tbody>
@@ -708,9 +711,11 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
       ['ver_nombre','Apellidos y nombres'],['ver_ruc','RUC'],['ver_oc','N.° OC'],['ver_expediente','Expediente SGD'],
       ['ver_monto','Monto total'],['ver_fecha_inicio','Fecha inicio OC'],['ver_fecha_termino','Fecha de término OC'],
       ['ver_plazo','Plazo de ejecución en días'],['ver_area','Área usuaria'],['ver_entregables','# Entregables'],
-      ['ver_status','Status'],['ver_credito','Crédito presupuestal']
+      ['ver_status','Status'],['ver_credito','Crédito presupuestal'],['ver_tracking','Estado del entregable']
     ];
     let currentColumns = Object.fromEntries(columnDefs.map(([k])=>[k,true]));
+    let localHiddenColumns = new Set();
+    try{localHiddenColumns=new Set(JSON.parse(localStorage.getItem('locadores:hiddenColumns')||'[]'))}catch(_){}
     let columnsTargetUser = null;
     let sortKey = null;
     let sortDir = 'asc';
@@ -731,7 +736,17 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
       });
     }
     function updateSortHeaders() {
-      document.querySelectorAll('#tableWrap thead th[data-sort-key]').forEach(th=>{
+  
+    // Preferencias visuales personales: no afectan permisos ni información de Supabase.
+    const columnsToggleBtn=$('#columnsToggleBtn'),columnsPopover=$('#columnsPopover'),columnsChoices=$('#columnsChoices');
+    function updateLocalColumns(){document.querySelectorAll('#tableWrap thead [data-col-key]').forEach(th=>{th.style.display=localHiddenColumns.has(th.dataset.colKey)?'none':''});if(!tableWrap.hidden)drawRows()}
+    function renderColumnsChoices(){columnsChoices.innerHTML=visibleColumnDefs().map(([key,label])=>'<label><input type="checkbox" data-visual-column="'+escapeHTML(key)+'" '+(localHiddenColumns.has(key)?'':'checked')+'><span>'+escapeHTML(label)+'</span></label>').join('')}
+    columnsToggleBtn.addEventListener('click',()=>{columnsPopover.hidden=!columnsPopover.hidden;columnsToggleBtn.setAttribute('aria-expanded',String(!columnsPopover.hidden));if(!columnsPopover.hidden)renderColumnsChoices()});
+    columnsChoices.addEventListener('change',event=>{const el=event.target;if(!el.matches('[data-visual-column]'))return;if(el.checked)localHiddenColumns.delete(el.dataset.visualColumn);else localHiddenColumns.add(el.dataset.visualColumn);localStorage.setItem('locadores:hiddenColumns',JSON.stringify([...localHiddenColumns]));updateLocalColumns()});
+    $('#columnsRestoreBtn').addEventListener('click',()=>{localHiddenColumns.clear();localStorage.removeItem('locadores:hiddenColumns');renderColumnsChoices();updateLocalColumns()});
+    document.addEventListener('click',event=>{if(!columnsPopover.hidden&&!columnsPopover.contains(event.target)&&event.target!==columnsToggleBtn){columnsPopover.hidden=true;columnsToggleBtn.setAttribute('aria-expanded','false')}});
+    updateLocalColumns();
+    document.querySelectorAll('#tableWrap thead th[data-sort-key]').forEach(th=>{
         th.dataset.sortDir = th.dataset.sortKey===sortKey ? sortDir : '';
         th.setAttribute('aria-sort', th.dataset.sortKey===sortKey ? (sortDir==='asc'?'ascending':'descending') : 'none');
       });
@@ -1179,7 +1194,7 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
         ver_status:'<td><span class="badge '+((row.estado_oc==='DESISTIÓ'||row.estado_oc==='ANULADO')?'badge-exit':'badge-active')+'">'+escapeHTML(displayStatus(row.estado_oc))+'</span></td>',
         ver_credito:'<td>'+escapeHTML(row.periodo||'—')+'</td>'
       };
-      const key=String(row.numero_oc||'')+'|'+String(row.periodo||'');const track=trackingStatusByOc.get(key);const state=track?.alerta||'SIN SEGUIMIENTO';const stateCell='<td class="tracking-state-cell" title="'+escapeHTML(state)+'"><span class="tracking-pill '+(state==='FINALIZADO'?'tracking-done':state==='DESISTIÓ'?'tracking-out':state==='SIN SEGUIMIENTO'?'tracking-none':'tracking-pending')+'">'+escapeHTML(state)+'</span></td>';return visibleColumnDefs().map(([k])=>vals[k]).join('')+stateCell;
+      const key=String(row.numero_oc||'')+'|'+String(row.periodo||'');const track=trackingStatusByOc.get(key);const state=track?.alerta||'SIN SEGUIMIENTO';const stateCell='<td class="tracking-state-cell" title="'+escapeHTML(state)+'"><span class="tracking-pill '+(state==='FINALIZADO'?'tracking-done':state==='DESISTIÓ'?'tracking-out':state==='SIN SEGUIMIENTO'?'tracking-none':'tracking-pending')+'">'+escapeHTML(state)+'</span></td>';vals.ver_tracking=stateCell;return visibleColumnDefs().filter(([k])=>!localHiddenColumns.has(k)).map(([k])=>vals[k]).join('');
     }
 
     function renderResults(rows, term) {
@@ -1260,7 +1275,7 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
       if (currentSearchMode === 'year' && viewMode.value !== 'list') {
         const ordered = groupedExportSets();
         resultsBody.innerHTML = ordered.map(rows =>
-          `<tr class="group-row"><td colspan="${visibleColumnDefs().length+1}"><div class="group-title">${escapeHTML(groupHeading(rows))}</div></td></tr>` +
+          `<tr class="group-row"><td colspan="${visibleColumnDefs().filter(([k])=>!localHiddenColumns.has(k)).length}"><div class="group-title">${escapeHTML(groupHeading(rows))}</div></td></tr>` +
           rows.map(rowHtml).join('')
         ).join('');
       } else {
