@@ -365,7 +365,10 @@
     .sync-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}.sync-status{margin:14px 0 0;color:var(--muted);white-space:pre-line}.sync-status.success{color:var(--green)}.sync-status.error{color:var(--red)}
 
     .sync-progress{margin:16px 0 4px}.sync-progress[hidden]{display:none}.sync-progress-head{display:flex;justify-content:space-between;gap:12px;font-size:.88rem;font-weight:700;color:var(--navy);margin-bottom:7px}.sync-progress-track{height:12px;background:#e7eef8;border-radius:999px;overflow:hidden}.sync-progress-bar{height:100%;width:0;background:var(--blue);border-radius:999px;transition:width .25s ease}.sync-progress-detail{margin-top:6px;font-size:.82rem;color:var(--muted)}
-.sync-add{border-top:1px solid var(--line);margin-top:8px;padding-top:14px}.sync-add-toggle{border:0;background:transparent;color:var(--blue);font-weight:800;padding:4px 0}.sync-add-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.sync-add-form[hidden]{display:none}.sync-add-form label{font-size:.78rem;font-weight:700;color:var(--muted)}.sync-add-form input{width:100%;box-sizing:border-box;margin-top:5px;border:1px solid var(--line);border-radius:9px;padding:9px 10px;font:inherit}.sync-add-wide{grid-column:1/-1}.sync-add-save{justify-self:start}@media(max-width:600px){.sync-add-form{grid-template-columns:1fr}.sync-add-wide{grid-column:auto}}</style>
+.sync-add{border-top:1px solid var(--line);margin-top:8px;padding-top:14px}.sync-add-toggle{border:0;background:transparent;color:var(--blue);font-weight:800;padding:4px 0}.sync-add-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.sync-add-form[hidden]{display:none}.sync-add-form label{font-size:.78rem;font-weight:700;color:var(--muted)}.sync-add-form input{width:100%;box-sizing:border-box;margin-top:5px;border:1px solid var(--line);border-radius:9px;padding:9px 10px;font:inherit}.sync-add-wide{grid-column:1/-1}.sync-add-save{justify-self:start}@media(max-width:600px){.sync-add-form{grid-template-columns:1fr}.sync-add-wide{grid-column:auto}}
+/* Navegación principal: botones uniformes */
+#sessionArea .main-nav a,#sessionArea #reportsBtn,#sessionArea #adminBtn,#sessionArea #logoutBtn{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;min-height:40px;height:40px;padding:8px 14px;border:1px solid rgba(255,255,255,.35);border-radius:9px;font-family:inherit;font-size:13px;font-weight:750;line-height:1.2;white-space:nowrap;letter-spacing:0;text-decoration:none}#sessionArea .main-nav a{min-width:136px}#sessionArea #reportsBtn,#sessionArea #adminBtn{min-width:136px}#sessionArea #logoutBtn{min-width:72px}
+</style>
 </head>
 <body>
   <div class="shell">
@@ -381,7 +384,7 @@
         <nav class="main-nav" aria-label="Navegación principal">
           <a class="active" href="index.html">Órdenes de Compra</a>
           <a href="seguimiento.html">Seguimiento</a>
-          <a id="importNav" href="import.html" hidden>Importar Excel</a>
+          
         </nav>
         <button id="reportsBtn" class="btn btn-admin" type="button">▤ Reportes</button>
         <button id="adminBtn" class="btn btn-admin" type="button" hidden>⚙ Administración</button>
