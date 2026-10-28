@@ -482,6 +482,43 @@ header #userEmail,header #sessionUser{display:none!important}
 #resultsTools .columns-popover,#resultsTools .export-menu{z-index:350!important}
 #filterPanel.filter-panel:not([hidden]){top:calc(76px + var(--oc-tools-sticky-height, 0px))!important;z-index:210!important}
 #tableWrap thead,#tableWrap thead th{top:calc(76px + var(--oc-tools-sticky-height, 0px) + var(--oc-filter-sticky-height, 0px) + 6px)!important}
+
+/* Tabla contenida: evita que la última columna se salga de la página.
+   Desplazamiento dentro de la tabla y encabezados pegados a su área visible. */
+#tableWrap.table-wrap:not([hidden]){
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  max-height:calc(100vh - 240px);
+  min-height:180px;
+  overflow:auto!important;
+  overscroll-behavior:contain;
+  border-radius:10px;
+}
+#tableWrap table{
+  width:max-content!important;
+  min-width:100%!important;
+  border-collapse:separate!important;
+  border-spacing:0!important;
+}
+#tableWrap thead{position:static!important}
+#tableWrap thead th{
+  position:sticky!important;
+  top:0!important;
+  z-index:12!important;
+  background:#f8fafc!important;
+}
+#tableWrap th.tracking-state-col,#tableWrap td.tracking-state-cell{
+  position:static!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+#tableWrap thead th.tracking-state-col{
+  position:sticky!important;
+  top:0!important;
+  background:#f8fafc!important;
+}
+@media(max-width:760px){#tableWrap.table-wrap:not([hidden]){max-height:65vh}}
 </style>
 </head>
 <body>
