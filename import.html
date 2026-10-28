@@ -33,6 +33,9 @@ header.topbar,header.top,body>header{height:76px!important;min-height:76px!impor
 
 /* Cabecera a ancho completo pese al desplazamiento del contenido */
 body:not(.login-sidebar-hidden)>header,body:not(.login-sidebar-hidden)>.shell>header{margin-left:calc(-1 * var(--app-side-width));width:calc(100% + var(--app-side-width))!important}body:has(#modalCompactFlag)>header{margin-left:0;width:100%!important}
+
+/* Aprovechar el ancho disponible junto al menú lateral */
+body:not(.login-sidebar-hidden) main{max-width:none!important;width:calc(100% - 32px)!important;margin-left:16px!important;margin-right:16px!important}body:not(.login-sidebar-hidden) .admin-page{max-width:none!important;padding-left:16px!important;padding-right:16px!important}body:not(.login-sidebar-hidden) main .dashboard-head{max-width:none!important}
 </style>
 </head>
 <body>
