@@ -408,6 +408,9 @@ main :is(.admin-panel,.ccp-panel,.report-item){box-shadow:0 5px 20px rgba(19,49,
 @media(max-width:980px){:root{--app-side-width:64px}#appSidebar{padding:16px 7px!important}#appSidebar .side-label,#appSidebar a span:not(.ui-icon),#appSidebar button span:not(.ui-icon){display:none!important}#appSidebar a,#appSidebar button{justify-content:center!important;padding:12px 7px!important}#appSidebar .ui-icon{width:22px;height:22px;flex-basis:22px}#appSidebar .ui-icon svg{width:22px;height:22px}}
 @media(max-width:650px){header.topbar,header.top,body>header{padding:9px 12px!important;min-height:64px!important;height:64px!important;flex-wrap:nowrap!important}#appSidebar{top:64px!important}header .brand{min-width:0!important;gap:9px!important}header .unified-brand-text strong{font-size:13px!important}header .unified-brand-text span{font-size:10px!important}header .user-email{display:none!important}body:not(.login-sidebar-hidden) main{width:calc(100% - 18px)!important;margin-left:9px!important;margin-right:9px!important}body:not(.login-sidebar-hidden) .admin-page{padding-left:9px!important;padding-right:9px!important}#adminContent .admin-dashboard-grid{grid-template-columns:minmax(0,1fr)!important}}
 body:has(#modalCompactFlag) #appSidebar{display:none!important}
+
+/* Estado de seguimiento, separado del estado administrativo de la OC */
+#tableWrap .tracking-state-col{min-width:145px!important}#tableWrap .tracking-state-cell{white-space:nowrap;font-size:11px!important}.tracking-pill{display:inline-block;padding:5px 8px;border-radius:999px;font-weight:750;font-size:10px;line-height:1.2;background:#eaf1f8;color:#35526b}.tracking-pill.tracking-done{background:#def4e8;color:#14643a}.tracking-pill.tracking-pending{background:#fff0d7;color:#8a5200}.tracking-pill.tracking-out{background:#f0e8ee;color:#78506c}.tracking-pill.tracking-none{background:#eef1f5;color:#66758b}
 </style>
 </head>
 <body>
@@ -568,7 +571,7 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
                 <th data-col-key="ver_plazo" class="sortable" data-sort-key="plazo" tabindex="0">Plazo de ejecución en días</th>
                 <th data-col-key="ver_area" class="sortable" data-sort-key="subgerencia" tabindex="0">Área usuaria</th>
                 <th data-col-key="ver_entregables" class="sortable" data-sort-key="numero_entregables" tabindex="0"># Entregables</th>
-                <th data-col-key="ver_status" class="sortable" data-sort-key="estado_oc" tabindex="0">Status</th>
+                <th data-col-key="ver_status" class="sortable" data-sort-key="estado_oc" tabindex="0">Status</th><th class="tracking-state-col">Estado del entregable</th>
                 <th data-col-key="ver_credito" class="sortable" data-sort-key="periodo" tabindex="0">Crédito presupuestal</th>
               </tr>
             </thead>
@@ -696,6 +699,7 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
     const detailGrid = $('#detailGrid');
     const detailSubtitle = $('#detailSubtitle');
     let allRows = [];
+    let trackingStatusByOc = new Map();
     let visibleRows = [];
     let currentTerm = '';
     let currentSearchMode = 'locador';
@@ -1083,6 +1087,15 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
       }
 
       currentSearchMode = mode;
+      trackingStatusByOc = new Map();
+      const ocKeys=[...new Set((data||[]).map(x=>String(x.numero_oc||'')).filter(Boolean))];
+      try{
+        for(let i=0;i<ocKeys.length;i+=100){
+          const {data:statuses,error:statusError}=await supabase.from('v_bandeja_entregables').select('numero_oc,periodo,alerta,fecha_presentacion').in('numero_oc',ocKeys.slice(i,i+100));
+          if(statusError)throw statusError;
+          for(const st of statuses||[]){const key=String(st.numero_oc||'')+'|'+String(st.periodo||'');trackingStatusByOc.set(key,st)}
+        }
+      }catch(statusError){console.warn('No se pudieron cargar los estados de seguimiento',statusError);showMessage(searchMessage,'Las órdenes se cargaron, pero no fue posible consultar los estados del seguimiento.','error')}
       renderResults(data || [], mode === 'year' ? 'Año ' + term : term);
     });
 
@@ -1166,7 +1179,7 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
         ver_status:'<td><span class="badge '+((row.estado_oc==='DESISTIÓ'||row.estado_oc==='ANULADO')?'badge-exit':'badge-active')+'">'+escapeHTML(displayStatus(row.estado_oc))+'</span></td>',
         ver_credito:'<td>'+escapeHTML(row.periodo||'—')+'</td>'
       };
-      return visibleColumnDefs().map(([k])=>vals[k]).join('');
+      const key=String(row.numero_oc||'')+'|'+String(row.periodo||'');const track=trackingStatusByOc.get(key);const state=track?.alerta||'SIN SEGUIMIENTO';const stateCell='<td class="tracking-state-cell" title="'+escapeHTML(state)+'"><span class="tracking-pill '+(state==='FINALIZADO'?'tracking-done':state==='DESISTIÓ'?'tracking-out':state==='SIN SEGUIMIENTO'?'tracking-none':'tracking-pending')+'">'+escapeHTML(state)+'</span></td>';return visibleColumnDefs().map(([k])=>vals[k]).join('')+stateCell;
     }
 
     function renderResults(rows, term) {
@@ -1247,7 +1260,7 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
       if (currentSearchMode === 'year' && viewMode.value !== 'list') {
         const ordered = groupedExportSets();
         resultsBody.innerHTML = ordered.map(rows =>
-          `<tr class="group-row"><td colspan="${visibleColumnDefs().length}"><div class="group-title">${escapeHTML(groupHeading(rows))}</div></td></tr>` +
+          `<tr class="group-row"><td colspan="${visibleColumnDefs().length+1}"><div class="group-title">${escapeHTML(groupHeading(rows))}</div></td></tr>` +
           rows.map(rowHtml).join('')
         ).join('');
       } else {
