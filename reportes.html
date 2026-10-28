@@ -414,6 +414,9 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
 
 /* Reportes: contenido compacto y alineado a la izquierda, como Seguimiento */
 body.report-page #reportsOverlay{padding:0!important;margin:0!important}body.report-page #reportsOverlay .reports-card{width:min(100%,980px)!important;max-width:980px!important;margin:20px 0 28px 0!important;border-radius:14px!important}body.report-page #reportsOverlay .detail-head{padding:18px 22px!important}body.report-page #reportsOverlay .detail-head h2{font-size:19px!important}body.report-page #reportsOverlay .detail-head p{font-size:12px!important}body.report-page #reportsOverlay .reports-list{padding:16px 20px 20px!important}body.report-page #reportsOverlay .report-item{padding:15px 17px!important;gap:16px!important;border-radius:11px!important}body.report-page #reportsOverlay .report-item h3{font-size:14px!important;margin:0 0 5px!important}body.report-page #reportsOverlay .report-item p{font-size:12px!important;line-height:1.45!important}body.report-page #reportsOverlay .report-item button{font-size:12px!important;padding:9px 13px!important;min-width:132px!important}@media(max-width:760px){body.report-page #reportsOverlay .reports-card{width:100%!important;margin:12px 0!important}body.report-page #reportsOverlay .report-item{flex-wrap:wrap!important}body.report-page #reportsOverlay .report-item button{width:100%!important}}
+
+/* Encabezado de página consistente con Seguimiento y Administración */
+body.report-page .reports-page-intro{max-width:980px;margin:20px 0 0;padding:0 2px}body.report-page .reports-page-intro .reports-eyebrow{font-size:11px;font-weight:850;letter-spacing:.15em;color:#146c87;margin:0 0 7px}body.report-page .reports-page-intro h1{font-size:clamp(26px,2.6vw,34px);line-height:1.15;color:#17365d;margin:0 0 9px;font-weight:800}body.report-page .reports-page-intro>p:last-child{color:#61758b;font-size:14px;line-height:1.55;margin:0}body.report-page #reportsOverlay .reports-card{margin-top:20px!important}@media(max-width:650px){body.report-page .reports-page-intro{margin-top:12px}}
 </style>
 </head>
 <body class="report-page">
@@ -619,7 +622,7 @@ body.report-page #reportsOverlay{padding:0!important;margin:0!important}body.rep
         <p id="columnsMessage" class="message"></p>
       </section>
     </div>
-    <div id="reportsOverlay" class="detail-overlay" hidden>
+    <section class="reports-page-intro" aria-labelledby="reportsPageTitle"><p class="reports-eyebrow">ANÁLISIS Y EXPORTACIÓN</p><h1 id="reportsPageTitle">Reportes</h1><p>Consulta las proyecciones de locadores y la distribución de pagos por periodo de ejecución. Genera archivos Excel a partir de la información registrada en el sistema.</p></section><div id="reportsOverlay" class="detail-overlay" hidden>
       <section class="detail-card reports-card" role="dialog" aria-modal="true" aria-labelledby="reportsTitle">
         <div class="detail-head">
           <div><h2 id="reportsTitle">Reportes</h2><p>Reportes generados directamente con la información disponible en Supabase.</p></div>
