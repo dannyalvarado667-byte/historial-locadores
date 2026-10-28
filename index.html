@@ -429,6 +429,9 @@ body>header .header-profile,header.topbar .header-profile,header.top .header-pro
 
 /* El correo ya se muestra dentro de la tarjeta del perfil */
 header #userEmail,header #sessionUser{display:none!important}
+
+/* Selector múltiple de estado del entregable */
+.status-filter-wrap{position:relative;min-width:0}.status-filter-wrap>button{width:100%;height:42px;border:1px solid #cbd6e4;border-radius:9px;background:#fff;color:#17365d;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 12px;text-align:left;font-size:12px;cursor:pointer}.status-filter-wrap>button span{margin-left:auto}.status-filter-panel{position:absolute;top:calc(100% + 5px);left:0;z-index:90;width:max(100%,255px);max-width:330px;background:white;border:1px solid #cbd6e4;border-radius:11px;box-shadow:0 12px 30px #102f4c30;padding:10px}.status-filter-panel[hidden]{display:none!important}.status-filter-heading{font-size:11px;font-weight:800;color:#61758b;padding:5px 7px 9px}.status-filter-options{max-height:290px;overflow:auto;display:grid;gap:1px}.status-filter-options label{display:flex;align-items:center;gap:9px;padding:8px 7px;font-size:12px;color:#17365d;cursor:pointer;border-radius:6px}.status-filter-options label:hover{background:#eef5fb}.status-filter-options input{accent-color:#087f8c;width:15px;height:15px}#filterStatusClear{margin-top:9px;width:100%;padding:9px;border:1px solid #cbd6e4;border-radius:7px;background:#f5f9fc;color:#17365d;font-weight:700;cursor:pointer}
 </style>
 </head>
 <body>
@@ -568,7 +571,7 @@ header #userEmail,header #sessionUser{display:none!important}
               </div>
             </div>
             <div class="filter-field" data-filter-col="ver_area"><label for="filterArea">Área usuaria</label><select id="filterArea"><option value="">Todas</option></select></div>
-            <div class="filter-field" data-filter-col="ver_tracking"><label for="filterStatus">Estado del entregable</label><select id="filterStatus"><option value="">Todas</option></select></div>
+            <div class="filter-field" data-filter-col="ver_tracking"><label for="filterStatusButton">Estado del entregable</label><div class="status-filter-wrap"><button id="filterStatusButton" type="button" aria-expanded="false" aria-controls="filterStatusPanel">Todos <span>▾</span></button><div id="filterStatusPanel" class="status-filter-panel" hidden><div class="status-filter-heading">Selecciona varios estados</div><div id="filterStatusOptions" class="status-filter-options"></div><button type="button" id="filterStatusClear">Limpiar selección</button></div></div></div>
             <div class="filter-field" data-filter-col="ver_entregables"><label for="filterDeliverables">Entregables</label><select id="filterDeliverables"><option value="">Todos</option></select></div>
             <div class="filter-field filter-oc-field" data-filter-col="ver_oc"><label for="filterOc">N.° OC</label><input id="filterOc" type="text" inputmode="numeric" placeholder="Filtrar OC"></div>
           </div>
@@ -1156,19 +1159,23 @@ header #userEmail,header #sessionUser{display:none!important}
         periods.map(v => '<label class="multi-option"><input type="checkbox" data-period-value="' + escapeHTML(v) + '" ' + (selectedPeriods.has(String(v)) ? 'checked' : '') + '> <span>' + escapeHTML(v) + '</span></label>').join('');
       updatePeriodButton();
       fillSelect('#filterArea', uniqueValues('subgerencia'), 'Todas');
-      fillSelect('#filterStatus', [...new Set(allRows.map(row => trackingStatusByOc.get(String(row.numero_oc||'')+'|'+String(row.periodo||''))?.alerta||'SIN SEGUIMIENTO'))].sort((a,b)=>String(a).localeCompare(String(b),'es')), 'Todos');
+      const states=[...new Set(allRows.map(row => trackingStatusByOc.get(String(row.numero_oc||'')+'|'+String(row.periodo||''))?.alerta||'SIN SEGUIMIENTO'))].sort((a,b)=>String(a).localeCompare(String(b),'es'));
+      $('#filterStatusOptions').innerHTML=states.map(state=>'<label><input type="checkbox" value="'+escapeHTML(state)+'" '+(selectedTrackingStates.has(state)?'checked':'')+'><span>'+escapeHTML(state)+'</span></label>').join('');
+      updateStatusFilterButton();
       fillSelect('#filterDeliverables', uniqueValues('numero_entregables'), 'Todos');
     }
 
+    const selectedTrackingStates=new Set();
+    function updateStatusFilterButton(){const btn=$('#filterStatusButton');const count=selectedTrackingStates.size;btn.innerHTML=(count===0?'Todos':count===1?escapeHTML([...selectedTrackingStates][0]):count+' estados seleccionados')+' <span>▾</span>';btn.title=count?[...selectedTrackingStates].join(', '):'Todos los estados';}
     function applyFilters() {
       const area = currentColumns.ver_area === false ? '' : $('#filterArea').value;
-      const status = currentColumns.ver_tracking === false ? '' : $('#filterStatus').value;
+      const status = currentColumns.ver_tracking === false ? [] : [...selectedTrackingStates];
       const deliverables = currentColumns.ver_entregables === false ? '' : $('#filterDeliverables').value;
       const oc = currentColumns.ver_oc === false ? '' : $('#filterOc').value.trim();
       visibleRows = allRows.filter(row =>
         (currentColumns.ver_credito === false || selectedPeriods.size === 0 || selectedPeriods.has(String(row.periodo ?? ''))) &&
         (!area || String(row.subgerencia ?? '') === area) &&
-        (!status || String(trackingStatusByOc.get(String(row.numero_oc||'')+'|'+String(row.periodo||''))?.alerta||'SIN SEGUIMIENTO') === status) &&
+        (status.length===0 || status.includes(String(trackingStatusByOc.get(String(row.numero_oc||'')+'|'+String(row.periodo||''))?.alerta||'SIN SEGUIMIENTO'))) &&
         (!deliverables || String(row.numero_entregables ?? '') === deliverables) &&
         (!oc || String(row.numero_oc ?? '').includes(oc))
       );
@@ -1379,11 +1386,15 @@ header #userEmail,header #sessionUser{display:none!important}
       updatePeriodButton();
       applyFilters();
     });
-    ['#filterArea','#filterStatus','#filterDeliverables'].forEach(sel => $(sel).addEventListener('change', applyFilters));
+    ['#filterArea','#filterDeliverables'].forEach(sel => $(sel).addEventListener('change', applyFilters));
+    $('#filterStatusButton').addEventListener('click',()=>{const panel=$('#filterStatusPanel');panel.hidden=!panel.hidden;$('#filterStatusButton').setAttribute('aria-expanded',String(!panel.hidden))});
+    $('#filterStatusOptions').addEventListener('change',e=>{if(!e.target.matches('input[type=checkbox]'))return;if(e.target.checked)selectedTrackingStates.add(e.target.value);else selectedTrackingStates.delete(e.target.value);updateStatusFilterButton();applyFilters()});
+    $('#filterStatusClear').addEventListener('click',()=>{selectedTrackingStates.clear();$('#filterStatusOptions').querySelectorAll('input').forEach(el=>el.checked=false);updateStatusFilterButton();applyFilters()});
+    document.addEventListener('click',e=>{const wrap=document.querySelector('.status-filter-wrap');if(wrap&&!wrap.contains(e.target)){$('#filterStatusPanel').hidden=true;$('#filterStatusButton').setAttribute('aria-expanded','false')}});
     $('#filterOc').addEventListener('input', applyFilters);
     $('#clearFilters').addEventListener('click', () => {
       selectedPeriods.clear();
-      ['#filterArea','#filterStatus','#filterDeliverables','#filterOc'].forEach(sel => $(sel).value = '');
+      ['#filterArea','#filterDeliverables','#filterOc'].forEach(sel => $(sel).value = '');selectedTrackingStates.clear();updateStatusFilterButton();
       sortKey = null;
       sortDir = 'asc';
       updateSortHeaders();
