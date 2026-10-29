@@ -511,9 +511,14 @@ header #userEmail,header #sessionUser{display:none!important}
     margin-right:20px!important;
   }
 }
+
+/* La navegación solo es visible con sesión autenticada y autorizada. */
+body.login-sidebar-hidden{padding-left:0!important}
+body.login-sidebar-hidden #appSidebar,body.login-sidebar-hidden header .header-profile{display:none!important}
+body.login-sidebar-hidden>header,body.login-sidebar-hidden>.shell>header{margin-left:0!important;width:100%!important}
 </style>
 </head>
-<body>
+<body class="login-sidebar-hidden">
   <div class="shell">
     <header class="topbar">
       <div class="brand"><a class="unified-logo" href="index.html" aria-label="Inicio">OC</a><div class="unified-brand-text"><strong>Historial de Locadores</strong><span>Gestión de órdenes de compra · GCTIC</span></div></div>
@@ -1106,6 +1111,7 @@ header #userEmail,header #sessionUser{display:none!important}
 
     function showSession(session) {
       const authenticated = Boolean(session?.user);
+      document.body.classList.toggle('login-sidebar-hidden', !authenticated);
       loginView.hidden = authenticated;
       appView.hidden = !authenticated;
       sessionArea.hidden = !authenticated;
