@@ -251,8 +251,8 @@ $('#editCancel').onclick=()=>{$('#detailEditForm').hidden=true;$('#detailBody').
 (()=> {
  const $=id=>document.getElementById(id);
  const fields=[['numero','N.°',(_,i)=>i+1],['ruc','RUC',x=>x.ruc],['apellidos_nombres','Locador',x=>x.apellidos_nombres],['expediente','Expediente',x=>x.expediente],['subgerencia','Área',x=>x.subgerencia],['numero_oc','OC',x=>x.numero_oc],['monto_total','Monto',x=>moneyText(x.monto_total)],['fecha_inicio','Inicio',x=>dateText(x.fecha_inicio)],['fecha_termino','Término',x=>dateText(x.fecha_termino)],['etiqueta_entregable','Entregable',x=>x.etiqueta_entregable],['fecha_presentacion','Fecha presentación',x=>dateText(x.fecha_presentacion)],['alerta','Estado / Alerta',x=>x.alerta]];
- const dateText=v=>{if(!v)return '—';const m=String(v).match(/^(\\d{4})-(\\d{2})-(\\d{2})/);return m?m[3]+'/'+m[2]+'/'+m[1]:String(v);};
- const moneyText=v=>v==null||v===''?'—':'S/ '+(Number(String(v).replace(/[^\\d.-]/g,''))||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+ const dateText=v=>{if(!v)return '—';const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[3]+'/'+m[2]+'/'+m[1]:String(v);};
+ const moneyText=v=>v==null||v===''?'—':'S/ '+(Number(String(v).replace(/[^\d.-]/g,''))||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
  const escapeHtml=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  let visible=new Set(fields.map(f=>f[0]));
  const selected=()=>{const c=$('trayModalCcp').value,a=$('trayModalAlert').value;return (window.trayRows||[]).filter(x=>(!c||x.periodo===c)&&(!a||x.alerta===a));};
