@@ -491,6 +491,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const SUPABASE_URL='https://acckrmanpgycunpvmfrl.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_2nDjJmqL9oNdWGcpm3MgnQ_KXg5WuBI';
 const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+window.locadoresSupabaseClient=supabase;
 const $=s=>document.querySelector(s);
 const esc=(v='')=>String(v).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const setBusy=(button,busy,label)=>{button.disabled=busy;button.textContent=label;};
