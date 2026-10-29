@@ -190,7 +190,7 @@ header #userEmail,header #sessionUser{display:none!important}
 .tray-modal-scroll{overflow:auto;flex:1;padding:0 12px 12px}
 .tray-modal-scroll table{border-collapse:collapse;width:100%;min-width:1100px;font-size:12px}
 .tray-modal-scroll th,.tray-modal-scroll td{padding:10px;border-bottom:1px solid #e5edf5;text-align:left;vertical-align:top}
-.tray-modal-scroll th{position:sticky;top:0;background:#f1f5fa;z-index:2;white-space:nowrap}
+.tray-modal-scroll th{position:sticky;top:0;background:#f1f5fa;z-index:2;white-space:nowrap}.tray-modal-scroll table{table-layout:fixed;width:max-content}.tray-modal-scroll th{position:sticky}.tray-modal-scroll th .modal-col-resize{position:absolute;right:0;top:0;width:10px;height:100%;cursor:col-resize;touch-action:none;background:linear-gradient(to right,transparent 4px,#b5c8de 4px,#b5c8de 6px,transparent 6px)}.tray-modal-scroll th .modal-col-resize:hover{background:#83b5ee}.tray-modal-scroll td{overflow-wrap:anywhere}
 @media(max-width:760px){.traytable{max-height:65vh}.tray-modal{padding:0}.tray-modal-card{height:100vh;border-radius:0}}
 .self-toast{position:fixed;right:24px;top:90px;z-index:9000;background:#08764b;color:#fff;padding:15px 22px;border-radius:12px;font-weight:800;box-shadow:0 10px 28px #0a3b2b50;max-width:calc(100vw - 48px)}
 
@@ -411,7 +411,28 @@ modal.querySelector('#selfForm').onsubmit=async e=>{e.preventDefault();const c=c
  const selected=()=> (window.trayRows||[]).filter(x=>(!selectedCcps.size||selectedCcps.has(x.periodo))&&(!selectedAlerts.size||selectedAlerts.has(x.alerta)));
  const active=()=>fields.filter(f=>visible.has(f[0]));
  const values=()=>selected().map((x,i)=>active().map(f=>f[2](x,i)??''));
- const render=()=>{const cols=active(),data=selected();$('trayModalCount').textContent=data.length+' registros';$('trayModalHead').innerHTML='<tr>'+cols.map(f=>'<th>'+escapeHtml(f[1])+'</th>').join('')+'</tr>';$('trayModalBody').innerHTML=data.map((x,i)=>'<tr>'+cols.map(f=>'<td>'+escapeHtml(f[2](x,i))+'</td>').join('')+'</tr>').join('');};
+ const modalWidths={};try{Object.assign(modalWidths,JSON.parse(sessionStorage.getItem('locadores-modal-widths')||'{}'))}catch{}
+ const render=()=>{
+  const activeCols=active(),data=selected(),table=$('trayModalHead').closest('table');
+  $('trayModalCount').textContent=data.length+' registros';
+  $('trayModalHead').innerHTML='<tr>'+activeCols.map(f=>'<th>'+escapeHtml(f[1])+'<span class="modal-col-resize" title="Arrastrar para ajustar el ancho"></span></th>').join('')+'</tr>';
+  $('trayModalBody').innerHTML=data.map((x,i)=>'<tr>'+activeCols.map(f=>'<td>'+escapeHtml(f[2](x,i))+'</td>').join('')+'</tr>').join('');
+  let cg=table.querySelector('colgroup');if(!cg){cg=document.createElement('colgroup');table.prepend(cg)}
+  const defaults={apellidos_nombres:310,expediente:200,numero_oc:135,subgerencia:115,alerta:190};
+  const ws=activeCols.map(f=>Math.max(65,Number(modalWidths[f[0]])||defaults[f[0]]||130));
+  cg.innerHTML=ws.map(w=>'<col style="width:'+w+'px">').join('');
+  const colEls=[...cg.children];
+  const apply=()=>{colEls.forEach((col,i)=>col.style.width=ws[i]+'px');table.style.setProperty('width',ws.reduce((a,b)=>a+b,0)+'px','important');table.style.setProperty('min-width','0','important')};
+  apply();
+  [...$('trayModalHead').querySelectorAll('th')].forEach((th,i)=>{
+   th.querySelector('.modal-col-resize').addEventListener('pointerdown',e=>{
+    if(e.button!==0)return;e.preventDefault();e.stopPropagation();const x0=e.clientX,w0=ws[i];
+    const move=ev=>{ws[i]=Math.max(65,Math.round(w0+ev.clientX-x0));apply()};
+    const done=()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',done);document.removeEventListener('pointercancel',done);modalWidths[activeCols[i][0]]=ws[i];try{sessionStorage.setItem('locadores-modal-widths',JSON.stringify(modalWidths))}catch{}};
+    document.addEventListener('pointermove',move);document.addEventListener('pointerup',done,{once:true});document.addEventListener('pointercancel',done,{once:true});
+   });
+  });
+ };
  const close=()=>{$('trayModal').hidden=true;document.body.style.overflow='';};
  const open=()=>{const ccp=$('trayCcp').value;selectedCcps=new Set(ccp?[ccp]:[]);$('trayCcpOptions').innerHTML=[...new Set((window.trayRows||[]).map(x=>x.periodo).filter(Boolean))].sort().map(x=>'<label class="tray-alert-option"><input type="checkbox" value="'+escapeHtml(x)+'" '+(selectedCcps.has(x)?'checked':'')+'> <span>'+escapeHtml(x)+'</span></label>').join('');$('trayCcpToggle').textContent=selectedCcps.size?[...selectedCcps].join(', ')+' ▾':'Todas las CCP ▾';$('trayCcpOptions').hidden=true;selectedAlerts.clear();$('trayAlertOptions').innerHTML=[...new Set((window.trayRows||[]).map(x=>x.alerta).filter(Boolean))].sort().map(x=>'<label class="tray-alert-option"><input type="checkbox" value="'+escapeHtml(x)+'"> <span>'+escapeHtml(x)+'</span></label>').join('');$('trayAlertOptions').hidden=true;$('trayAlertToggle').setAttribute('aria-expanded','false');$('trayAlertToggle').textContent='Todos los estados ▾';$('trayModalColumns').innerHTML=fields.map(f=>'<label><input type="checkbox" data-tray-col="'+f[0]+'" checked> '+escapeHtml(f[1])+'</label>').join('');visible=new Set(fields.map(f=>f[0]));$('trayModalColsToggle').checked=false;$('trayModalColumns').hidden=true;$('trayModal').hidden=false;document.body.style.overflow='hidden';render();};
  const csvCell=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
