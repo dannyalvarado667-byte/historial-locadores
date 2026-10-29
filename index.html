@@ -220,7 +220,7 @@
     .search-stat { position:absolute; left:50%; right:0; top:0; bottom:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
     .search-stat strong { display:block; font-size:2.35rem; line-height:1; color:var(--navy); }
     .search-stat span { margin-top:8px; font-size:.9rem; color:var(--muted); }
-    .search-select-wrap{position:relative;min-width:0}.search-select-wrap>select[hidden]{display:none!important}.search-select-menu{position:relative}.search-select-menu>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;padding:12px 14px;border:1px solid #bfcee2;border-radius:10px;background:#f7fbff;color:#17365d;font-size:.85rem;font-weight:750;cursor:pointer}.search-select-menu>summary::-webkit-details-marker{display:none}.search-select-menu>summary:after{content:'▾';color:#1967d2}.search-select-menu[open]>summary{border-color:#1967d2;box-shadow:0 0 0 2px #1967d21f}.search-select-options{position:absolute;z-index:90;top:calc(100% + 6px);left:0;right:0;min-width:200px;padding:8px;border:1px solid #dbe5f1;border-radius:14px;background:white;box-shadow:0 14px 36px #17365d24;display:grid;gap:5px}.search-select-options button{display:block;width:100%;padding:11px 12px;border:1px solid #e0e8f3;border-radius:10px;background:#fff;color:#345071;text-align:left;font-size:.82rem;font-weight:750;cursor:pointer}.search-select-options button:hover,.search-select-options button.selected{background:#edf5ff;border-color:#b6d1f7;color:#1252a6}
+    .search-select-wrap{position:relative;min-width:0}.year-select-wrap:has(#yearSelect[hidden]){display:none!important}.year-select-wrap #yearSelect{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important}.search-select-options button.selected{font-weight:850}.search-select-wrap>select[hidden]{display:none!important}.search-select-menu{position:relative}.search-select-menu>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;padding:12px 14px;border:1px solid #bfcee2;border-radius:10px;background:#f7fbff;color:#17365d;font-size:.85rem;font-weight:750;cursor:pointer}.search-select-menu>summary::-webkit-details-marker{display:none}.search-select-menu>summary:after{content:'▾';color:#1967d2}.search-select-menu[open]>summary{border-color:#1967d2;box-shadow:0 0 0 2px #1967d21f}.search-select-options{position:absolute;z-index:90;top:calc(100% + 6px);left:0;right:0;min-width:200px;padding:8px;border:1px solid #dbe5f1;border-radius:14px;background:white;box-shadow:0 14px 36px #17365d24;display:grid;gap:5px}.search-select-options button{display:block;width:100%;padding:11px 12px;border:1px solid #e0e8f3;border-radius:10px;background:#fff;color:#345071;text-align:left;font-size:.82rem;font-weight:750;cursor:pointer}.search-select-options button:hover,.search-select-options button.selected{background:#edf5ff;border-color:#b6d1f7;color:#1252a6}
     .search-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 50%; }
     .search-row .btn-primary { grid-column: 1 / -1; }
     .search-help { margin: 11px 0 0; color: var(--muted); font-size: .84rem; }
@@ -606,12 +606,7 @@ body.login-sidebar-hidden>header,body.login-sidebar-hidden>.shell>header{margin-
           <div class="search-row">
             <div class="search-select-wrap"><details class="search-select-menu" id="searchTypeMenu"><summary id="searchTypeSummary">Locador / RUC</summary><div class="search-select-options"><button type="button" data-search-type="locador" class="selected">Locador / RUC</button><button type="button" data-search-type="year">Año</button></div></details><select id="searchType" class="search-input" aria-label="Tipo de búsqueda" hidden><option value="locador">Locador / RUC</option><option value="year">Año</option></select></div>
             <input id="searchInput" class="search-input" type="search" maxlength="80" placeholder="Ejemplo: Altamirano o 10456034280" aria-label="Nombre o RUC del locador">
-            <select id="yearSelect" class="search-input" aria-label="Año de la orden de compra" hidden>
-              <option value="">Selecciona un año</option>
-              <option value="2025">2025</option>
-              <option value="2026">2026</option>
-              <option value="2027">2027</option>
-            </select>
+            <div class="search-select-wrap year-select-wrap"><details class="search-select-menu" id="yearSelectMenu"><summary id="yearSelectSummary">Selecciona un año</summary><div class="search-select-options"><button type="button" data-year="">Selecciona un año</button><button type="button" data-year="2025">2025</button><button type="button" data-year="2026">2026</button><button type="button" data-year="2027">2027</button></div></details><select id="yearSelect" class="search-input" aria-label="Año de la orden de compra" hidden><option value="">Selecciona un año</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option></select></div>
             <button id="searchBtn" class="btn btn-primary" type="submit">Buscar historial</button>
           </div>
           <div class="search-stat">
@@ -1190,7 +1185,7 @@ window.locadoresSupabaseClient=supabase;
         searchInput.hidden = true;
         yearSelect.hidden = false;
         searchHelp.textContent = 'Selecciona el año que deseas consultar.';
-        yearSelect.focus();
+        document.getElementById('yearSelectSummary').focus();
       } else {
         yearSelect.hidden = true;
         searchInput.hidden = false;
@@ -2184,6 +2179,19 @@ modal.querySelector('#selfForm').onsubmit=async e=>{e.preventDefault();const c=c
  }));
  document.addEventListener('pointerdown',e=>{if(menu.open&&!menu.contains(e.target))menu.open=false});
  document.addEventListener('keydown',e=>{if(e.key==='Escape')menu.open=false});
+})();
+
+// El selector de año mantiene el mismo diseño del selector de tipo de búsqueda.
+(function(){
+ const select=document.getElementById('yearSelect'),menu=document.getElementById('yearSelectMenu'),summary=document.getElementById('yearSelectSummary');
+ if(!select||!menu)return;
+ const sync=()=>{const selected=select.value;summary.textContent=selected||'Selecciona un año';menu.querySelectorAll('[data-year]').forEach(b=>b.classList.toggle('selected',b.dataset.year===selected))};
+ menu.querySelectorAll('[data-year]').forEach(btn=>btn.addEventListener('click',()=>{select.value=btn.dataset.year;sync();menu.open=false;select.dispatchEvent(new Event('change',{bubbles:true}))}));
+ select.addEventListener('change',sync);
+ const observer=new MutationObserver(()=>{if(select.hidden)menu.open=false;sync()});observer.observe(select,{attributes:true,attributeFilter:['hidden']});
+ document.addEventListener('pointerdown',e=>{if(menu.open&&!menu.contains(e.target))menu.open=false});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')menu.open=false});
+ sync();
 })();
 </script></body>
 </html>
