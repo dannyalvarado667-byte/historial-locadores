@@ -690,6 +690,7 @@ header #userEmail,header #sessionUser{display:none!important}
     const SUPABASE_URL = 'https://acckrmanpgycunpvmfrl.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_2nDjJmqL9oNdWGcpm3MgnQ_KXg5WuBI';
     const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+window.locadoresSupabaseClient=supabase;
     let currentAccessSessionId = null;
     let activityHeartbeat = null;
     let lastActivityWrite = 0;
