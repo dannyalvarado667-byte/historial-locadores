@@ -640,9 +640,9 @@ modal.querySelector('#selfCancel').onclick=()=>modal.hidden=true;modal.addEventL
 modal.querySelector('#selfForm').onsubmit=async e=>{e.preventDefault();const c=client(),name=modal.querySelector('#selfName').value.trim(),pass=modal.querySelector('#selfPass').value,confirm=modal.querySelector('#selfConfirm').value,feedback=modal.querySelector('#selfFeedback'),save=modal.querySelector('#selfSave');if(name.length<3){feedback.textContent='Ingresa un nombre válido.';return}if(pass&&(pass.length<8||pass!==confirm)){feedback.textContent='Las contraseñas deben coincidir y tener al menos 8 caracteres.';return}if(!pass&&confirm){feedback.textContent='Ingresa la nueva contraseña.';return}save.disabled=true;feedback.textContent='Guardando…';try{const {error:ne}=await c.rpc('actualizar_mi_nombre',{p_nombre:name});if(ne)throw ne;card.querySelector('.header-profile-info strong').textContent=name;card.querySelector('.header-profile-avatar').textContent=name.charAt(0).toUpperCase();window.locadoresProfileName=name;if(pass){const {error:pe}=await c.auth.updateUser({password:pass});if(pe){feedback.textContent='Nombre actualizado, pero la contraseña no cambió: '+pe.message;return}}feedback.textContent='Cambios guardados correctamente.';feedback.classList.add('success');modal.querySelector('#selfPass').value='';modal.querySelector('#selfConfirm').value='';modal.hidden=true;const toast=document.createElement('div');toast.className='self-toast';toast.setAttribute('role','status');toast.textContent='✓ Cambios guardados correctamente';document.body.appendChild(toast);setTimeout(()=>toast.remove(),4500);}catch(err){feedback.textContent='No se pudo guardar: '+err.message}finally{save.disabled=false}};
 })();
 </script><script>
-/* Consulta de CCP y registros existentes: solo lectura. */
-(()=>{
- const db=window.locadoresSupabaseClient;if(!db)return;
+/* Consulta de CCP y registros existentes: solo lectura. Esperar al módulo Supabase. */
+document.addEventListener('DOMContentLoaded',()=>{
+ const db=window.locadoresSupabaseClient;if(!db){document.getElementById('ccpDataSummary').textContent='No se inicializó la conexión a Supabase. Recarga la página.';return;}
  const el=id=>document.getElementById(id),safe=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  let orders=[],activePeriod=null,loaded=false;
  const money=v=>v==null?'—':'S/ '+Number(v).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -670,6 +670,6 @@ modal.querySelector('#selfForm').onsubmit=async e=>{e.preventDefault();const c=c
  };
  el('ccpDataRefresh').addEventListener('click',load);el('ccpDataSearch').addEventListener('input',()=>{if(loaded)render()});
  // Esperar a que el usuario entre a la sección de administración.
- const observer=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)&&!loaded){observer.disconnect();load()}},{rootMargin:'150px'});observer.observe(el('ccpDataSummary'));
-})();
+ load();
+});
 </script></body></html>
