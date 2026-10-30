@@ -609,7 +609,7 @@ body.login-sidebar-hidden>header,body.login-sidebar-hidden>.shell>header{margin-
           <div class="search-row">
             <div class="search-select-wrap"><details class="search-select-menu" id="searchTypeMenu"><summary id="searchTypeSummary">Locador / RUC</summary><div class="search-select-options"><button type="button" data-search-type="locador" class="selected">Locador / RUC</button><button type="button" data-search-type="year">Año</button></div></details><select id="searchType" class="search-input" aria-label="Tipo de búsqueda" hidden><option value="locador">Locador / RUC</option><option value="year">Año</option></select></div>
             <input id="searchInput" class="search-input" type="search" maxlength="80" placeholder="Ejemplo: Altamirano o 10456034280" aria-label="Nombre o RUC del locador">
-            <div class="search-select-wrap year-select-wrap"><details class="search-select-menu" id="yearSelectMenu"><summary id="yearSelectSummary">Selecciona un año</summary><div class="search-select-options"><button type="button" data-year="">Selecciona un año</button><button type="button" data-year="2025">2025</button><button type="button" data-year="2026">2026</button><button type="button" data-year="2027">2027</button></div></details><select id="yearSelect" class="search-input" aria-label="Año de la orden de compra" hidden><option value="">Selecciona un año</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option></select></div>
+            <div class="search-select-wrap year-select-wrap"><details class="search-select-menu" id="yearSelectMenu"><summary id="yearSelectSummary">Selecciona un año</summary><div class="search-select-options"><button type="button" data-year="">Selecciona un año</button><button type="button" data-year="2026">2026</button><button type="button" data-year="2027">2027</button></div></details><select id="yearSelect" class="search-input" aria-label="Año de la orden de compra" hidden><option value="">Selecciona un año</option><option value="2026">2026</option><option value="2027">2027</option></select></div>
             <button id="searchBtn" class="btn btn-primary" type="submit">Buscar historial</button>
           </div>
           <div class="search-stat">
@@ -1209,7 +1209,7 @@ window.locadoresSupabaseClient=supabase;
       const isRuc = /^\d{11}$/.test(term);
 
       if (mode === 'year') {
-        if (!['2025','2026','2027'].includes(term)) {
+        if (!['2026','2027'].includes(term)) {
           showMessage(searchMessage, 'Selecciona un año para realizar la consulta.', 'error');
           return;
         }
