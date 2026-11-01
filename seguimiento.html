@@ -560,6 +560,17 @@ modal.querySelector('#selfForm').onsubmit=async e=>{e.preventDefault();const c=c
  const finish=e=>{if(handle.hasPointerCapture(e.pointerId))handle.releasePointerCapture(e.pointerId);document.body.style.userSelect='';};
  handle.addEventListener('pointerup',finish);handle.addEventListener('pointercancel',finish);
  $('trayExpand').addEventListener('click',open);$('trayModalClose').addEventListener('click',close);$('trayModal').addEventListener('click',e=>{if(e.target===$('trayModal'))close()});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('trayModal').hidden)close()});
+ // Cerrar los desplegables al pulsar fuera de ellos o presionar Escape.
+ document.addEventListener('pointerdown',e=>{
+  if(!$('trayModal')||$('trayModal').hidden)return;
+  if(!e.target.closest('#trayCcpToggle')&&!e.target.closest('#trayCcpOptions'))$('trayCcpOptions').hidden=true;
+  if(!e.target.closest('#trayAlertToggle')&&!e.target.closest('#trayAlertOptions')){$('trayAlertOptions').hidden=true;$('trayAlertToggle').setAttribute('aria-expanded','false')}
+ });
+ document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape'||$('trayModal').hidden)return;
+  $('trayCcpOptions').hidden=true;$('trayAlertOptions').hidden=true;
+  $('trayAlertToggle').setAttribute('aria-expanded','false');
+ });
  $('trayCcpToggle').addEventListener('click',()=>{const box=$('trayCcpOptions');box.hidden=!box.hidden;$('trayCcpToggle').setAttribute('aria-expanded',String(!box.hidden));});$('trayCcpOptions').addEventListener('change',e=>{if(!e.target.matches('input[type=checkbox]'))return;e.target.checked?selectedCcps.add(e.target.value):selectedCcps.delete(e.target.value);$('trayCcpToggle').textContent=selectedCcps.size?selectedCcps.size+' CCP seleccionadas ▾':'Todas las CCP ▾';render();});$('trayClearFilters').addEventListener('click',()=>{selectedCcps.clear();selectedAlerts.clear();$('trayCcpOptions').querySelectorAll('input').forEach(x=>x.checked=false);$('trayAlertOptions').querySelectorAll('input').forEach(x=>x.checked=false);$('trayCcpToggle').textContent='Todas las CCP ▾';$('trayAlertToggle').textContent='Todos los estados ▾';$('trayCcpOptions').hidden=true;$('trayAlertOptions').hidden=true;render();});$('trayAlertToggle').addEventListener('click',()=>{const box=$('trayAlertOptions');box.hidden=!box.hidden;$('trayAlertToggle').setAttribute('aria-expanded',String(!box.hidden));});$('trayAlertOptions').addEventListener('change',e=>{if(!e.target.matches('input[type=checkbox]'))return;e.target.checked?selectedAlerts.add(e.target.value):selectedAlerts.delete(e.target.value);$('trayAlertToggle').textContent=selectedAlerts.size?selectedAlerts.size+' estados seleccionados ▾':'Todos los estados ▾';render();});document.addEventListener('click',e=>{if(!e.target.closest('#trayAlertToggle')&&!e.target.closest('#trayAlertOptions')){$('trayAlertOptions').hidden=true;$('trayAlertToggle').setAttribute('aria-expanded','false')}});
  $('trayModalColsToggle').addEventListener('change',e=>$('trayModalColumns').hidden=!e.target.checked);
  $('trayModalColumns').addEventListener('change',e=>{if(!e.target.matches('[data-tray-col]'))return;e.target.checked?visible.add(e.target.dataset.trayCol):visible.delete(e.target.dataset.trayCol);render()});
