@@ -222,8 +222,12 @@
     .search-stat span { margin-top:8px; font-size:.9rem; color:var(--muted); }
     .search-select-wrap{position:relative;min-width:0}.year-select-wrap:has(#yearSelect[hidden]){display:none!important}.year-select-wrap #yearSelect{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important}.search-select-options button.selected{font-weight:850}.search-select-wrap>select[hidden]{display:none!important}.search-select-menu{position:relative}.search-select-menu>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;padding:12px 14px;border:1px solid #bfcee2;border-radius:10px;background:#f7fbff;color:#17365d;font-size:.85rem;font-weight:750;cursor:pointer}.search-select-menu>summary::-webkit-details-marker{display:none}.search-select-menu>summary:after{content:'▾';color:#1967d2}.search-select-menu[open]>summary{border-color:#1967d2;box-shadow:0 0 0 2px #1967d21f}.search-select-options{position:absolute;z-index:90;top:calc(100% + 6px);left:0;right:0;min-width:200px;padding:8px;border:1px solid #dbe5f1;border-radius:14px;background:white;box-shadow:0 14px 36px #17365d24;display:grid;gap:5px}.search-select-options button{display:block;width:100%;padding:11px 12px;border:1px solid #e0e8f3;border-radius:10px;background:#fff;color:#345071;text-align:left;font-size:.82rem;font-weight:750;cursor:pointer}.search-select-options button:hover,.search-select-options button.selected{background:#edf5ff;border-color:#b6d1f7;color:#1252a6}
     .search-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 50%; }
-/* Selector de tipo de búsqueda: mitad del ancho anterior; campo de texto intacto. */
-@media (min-width:651px){.search-row .search-select-wrap:has(#searchTypeMenu){width:50%;}}
+/* Distribución compacta: selector junto al buscador y botón alineado al mismo ancho del buscador. */
+@media (min-width:651px){
+  .search-row{grid-template-columns:minmax(145px,1fr) minmax(0,2fr)}
+  .search-row .search-select-wrap:has(#searchTypeMenu){width:100%}
+  .search-row .btn-primary{grid-column:2}
+}
     .search-row .btn-primary { grid-column: 1 / -1; }
     /* Solo anchura: 20 % menos que el ancho previo (50 % → 40 %).
        Se restauran alturas, tipografía y rellenos originales. */
