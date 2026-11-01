@@ -72,6 +72,27 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
     margin-right:20px!important;
   }
 }
+
+/* Mejora de legibilidad en móviles: contraste sin alterar distribución ni funciones. */
+@media (max-width: 850px) {
+  body { -webkit-font-smoothing: auto; }
+  main, main p, main small, main label, main td, main th,
+  main .hint, main .subtitle, main .muted, main .description,
+  main .summary, main .metric, main .field, main .message,
+  main input, main select, main textarea {
+    opacity: 1 !important;
+    color: #263b55;
+  }
+  main th, main label { color: #34465c; font-weight: 750; }
+  main td { color: #263b55; font-weight: 550; }
+  main input::placeholder, main textarea::placeholder {
+    color: #52647a !important; opacity: 1 !important;
+  }
+  main input:not([type="checkbox"]):not([type="radio"]),
+  main select, main textarea { border-color: #a8b9cd; }
+  main .btn-primary, main button.primary, main .primary,
+  main .btn-primary *, main button.primary * { color: #fff; }
+}
 </style>
 </head>
 <body>
