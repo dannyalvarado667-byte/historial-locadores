@@ -183,6 +183,11 @@ header #userEmail,header #sessionUser{display:none!important}
 #trayModalCount{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;padding:10px 15px;border-radius:12px;background:#fff0a8;border:1px solid #e6bf42;color:#594000;font-size:16px;font-weight:800;box-shadow:0 2px 5px rgba(105,76,0,.10);font-variant-numeric:tabular-nums}
 #trayAlertOptions .tray-alert-option{display:flex;align-items:center;gap:9px}
 #trayAlertOptions .tray-state-count{margin-left:auto;min-width:26px;padding:4px 8px;border-radius:9px;background:#fff0a8;border:1px solid #e6bf42;color:#594000;text-align:center;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums}
+#trayClearFilters{min-width:0;width:auto;max-width:none;padding:10px 17px;border:1px solid #2764a8;border-radius:10px;background:#1967b7;color:#fff;font:700 13px Arial,sans-serif;text-align:center;box-shadow:0 2px 5px rgba(18,60,110,.15);transition:background .15s,transform .15s}
+#trayClearFilters:hover{background:#124d8c}#trayClearFilters:active{transform:translateY(1px)}
+.tray-modal-scroll th .tray-sort-btn{border:0;background:transparent;color:inherit;font:inherit;font-weight:750;cursor:pointer;padding:2px 12px 2px 0;text-align:left;white-space:nowrap}
+.tray-modal-scroll th .tray-sort-btn:hover{color:#1467bb;text-decoration:underline}
+.tray-modal-scroll th .tray-sort-btn:focus-visible{outline:2px solid #1967d2;outline-offset:2px;border-radius:3px}
 .tray-expand-btn{border:1px solid #c5d9ee;background:#fff;color:#17365d;border-radius:10px;padding:9px 13px;font-weight:750;cursor:pointer}
 .traytable::after{content:"";display:block;height:3px}
 .tray-modal[hidden]{display:none!important}
@@ -513,17 +518,19 @@ modal.querySelector('#selfForm').onsubmit=async e=>{e.preventDefault();const c=c
  const moneyText=v=>v==null||v===''?'—':'S/ '+(Number(String(v).replace(/[^\d.-]/g,''))||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
  const escapeHtml=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  let visible=new Set(fields.map(f=>f[0]));let selectedAlerts=new Set();let selectedCcps=new Set();
+ let sortField=null,sortDirection=1;
  const selected=()=> (window.trayRows||[]).filter(x=>(!selectedCcps.size||selectedCcps.has(x.periodo))&&(!selectedAlerts.size||selectedAlerts.has(x.alerta)));
  const active=()=>fields.filter(f=>visible.has(f[0]));
  const values=()=>selected().map((x,i)=>active().map(f=>f[2](x,i)??''));
  const modalWidths={};try{Object.assign(modalWidths,JSON.parse(sessionStorage.getItem('locadores-modal-widths')||'{}'))}catch{}
  const render=()=>{
-  const activeCols=active(),data=selected(),table=$('trayModalHead').closest('table');
+  const activeCols=active(),data=selected().slice(),table=$('trayModalHead').closest('table');
+  if(sortField){const field=fields.find(f=>f[0]===sortField);if(field)data.sort((a,b)=>{const av=field[2](a,0),bv=field[2](b,0);if(['fecha_inicio','fecha_termino','fecha_presentacion'].includes(sortField))return sortDirection*String(a[sortField]||'').localeCompare(String(b[sortField]||''));if(['monto_total','numero'].includes(sortField))return sortDirection*(Number(a[sortField]||0)-Number(b[sortField]||0));return sortDirection*String(av??'').localeCompare(String(bv??''),'es',{numeric:true,sensitivity:'base'})})}
   $('trayModalCount').textContent=data.length+' registros';
   const stateCounts=new Map();
   (window.trayRows||[]).filter(x=>!selectedCcps.size||selectedCcps.has(x.periodo)).forEach(x=>stateCounts.set(x.alerta,(stateCounts.get(x.alerta)||0)+1));
   $('trayAlertOptions').querySelectorAll('input[type=checkbox]').forEach(input=>{const badge=input.parentElement.querySelector('.tray-state-count');if(badge)badge.textContent=String(stateCounts.get(input.value)||0)});
-  $('trayModalHead').innerHTML='<tr>'+activeCols.map(f=>'<th>'+escapeHtml(f[1])+'<span class="modal-col-resize" title="Arrastrar para ajustar el ancho"></span></th>').join('')+'</tr>';
+  $('trayModalHead').innerHTML='<tr>'+activeCols.map(f=>'<th aria-sort="'+(sortField===f[0]?(sortDirection===1?'ascending':'descending'):'none')+'"><button type="button" class="tray-sort-btn" data-sort-field="'+escapeHtml(f[0])+'" title="Ordenar por '+escapeHtml(f[1])+'">'+escapeHtml(f[1])+(sortField===f[0]?(sortDirection===1?' ▲':' ▼'):' ↕')+'</button><span class="modal-col-resize" title="Arrastrar para ajustar el ancho"></span></th>').join('')+'</tr>';
   $('trayModalBody').innerHTML=data.map((x,i)=>'<tr>'+activeCols.map(f=>'<td>'+escapeHtml(f[2](x,i))+'</td>').join('')+'</tr>').join('');
   let cg=table.querySelector('colgroup');if(!cg){cg=document.createElement('colgroup');table.prepend(cg)}
   const defaults={apellidos_nombres:310,expediente:200,numero_oc:135,subgerencia:115,alerta:190};
@@ -532,6 +539,7 @@ modal.querySelector('#selfForm').onsubmit=async e=>{e.preventDefault();const c=c
   const colEls=[...cg.children];
   const apply=()=>{colEls.forEach((col,i)=>col.style.width=ws[i]+'px');table.style.setProperty('width',ws.reduce((a,b)=>a+b,0)+'px','important');table.style.setProperty('min-width','0','important')};
   apply();
+  $('trayModalHead').querySelectorAll('[data-sort-field]').forEach(btn=>btn.addEventListener('click',()=>{const key=btn.dataset.sortField;sortDirection=sortField===key?-sortDirection:1;sortField=key;render()}));
   [...$('trayModalHead').querySelectorAll('th')].forEach((th,i)=>{
    th.querySelector('.modal-col-resize').addEventListener('pointerdown',e=>{
     if(e.button!==0)return;e.preventDefault();e.stopPropagation();const x0=e.clientX,w0=ws[i];
