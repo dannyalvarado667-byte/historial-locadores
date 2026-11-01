@@ -533,6 +533,34 @@ body.login-sidebar-hidden>header,body.login-sidebar-hidden>.shell>header{margin-
   #tableWrap.table-wrap{overflow:clip!important;overflow-clip-margin:0;border-radius:15px}
   #tableWrap thead th{position:sticky!important;top:0!important;z-index:35;background:#f2f6fb;box-shadow:0 2px 5px rgba(23,54,93,.14)}
 }
+
+/* Legibilidad móvil: contraste de texto en historial y filtros.
+   No modifica distribución, datos ni comportamiento. */
+@media (max-width: 850px) {
+  body { -webkit-font-smoothing: auto; }
+  .dashboard-head h1, .dashboard-head p,
+  .search-help, .search-stat span, .results-summary,
+  .filter-field label, .filter-field select, .filter-field input,
+  .filter-multi-btn, .multi-select-btn, .status-filter-wrap > button,
+  .group-menu button, .search-select-menu > summary,
+  .btn-tool, #tableWrap th, #tableWrap td {
+    opacity: 1 !important;
+    color: #26384f !important;
+    font-weight: 600;
+  }
+  .dashboard-head h1, .search-stat strong { color: #17365d !important; }
+  #tableWrap td { font-weight: 550; }
+  #tableWrap th { color: #26384f !important; font-weight: 800; }
+  .filter-field label { color: #34475e !important; font-weight: 800; }
+  .filter-field select, .filter-field input,
+  .filter-multi-btn, .multi-select-btn,
+  .status-filter-wrap > button, .search-select-menu > summary {
+    background-color: #fff !important;
+    border-color: #aebed0 !important;
+  }
+  .filter-field input::placeholder, .search-input::placeholder { color: #53647a !important; opacity: 1 !important; }
+  .search-help, .search-stat span, .results-summary, .dashboard-head p { color: #45566c !important; }
+}
 </style>
 </head>
 <body class="login-sidebar-hidden">
