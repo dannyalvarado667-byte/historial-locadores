@@ -561,6 +561,28 @@ body.login-sidebar-hidden>header,body.login-sidebar-hidden>.shell>header{margin-
   .filter-field input::placeholder, .search-input::placeholder { color: #53647a !important; opacity: 1 !important; }
   .search-help, .search-stat span, .results-summary, .dashboard-head p { color: #45566c !important; }
 }
+
+/* Contraste móvil específico de tabla Historial de OC. */
+@media(max-width:850px){
+ #tableWrap table tbody tr td,
+ #tableWrap table tbody tr td *,
+ #tableWrap table thead tr th,
+ #tableWrap table thead tr th *,
+ #tableWrap .visual-row-number,
+ #filterPanel .filter-field label,
+ #filterPanel .filter-field input,
+ #filterPanel .filter-field select {
+   color:#1b304b!important;
+   opacity:1!important;
+   font-weight:650!important;
+   text-shadow:none!important;
+ }
+ #tableWrap table thead tr th {color:#1b304b!important;font-weight:850!important;background:#e8eff8!important;}
+ #tableWrap table tbody tr:nth-child(odd) td {background:#fff!important;}
+ #tableWrap table tbody tr:nth-child(even) td {background:#f1f5fa!important;}
+ #tableWrap table tbody td.visual-row-number {color:#354960!important;}
+ #filterPanel .filter-field label {font-weight:850!important;}
+}
 </style>
 </head>
 <body class="login-sidebar-hidden">
