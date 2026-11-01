@@ -521,6 +521,12 @@ body.login-sidebar-hidden{padding-left:0!important}
 body.login-sidebar-hidden #appSidebar,body.login-sidebar-hidden header .header-profile{display:none!important}
 body.login-sidebar-hidden>header,body.login-sidebar-hidden>.shell>header{margin-left:0!important;width:100%!important}
 .self-toast{position:fixed;right:24px;top:90px;z-index:9000;background:#08764b;color:#fff;padding:15px 22px;border-radius:12px;font-weight:800;box-shadow:0 10px 28px #0a3b2b50;max-width:calc(100vw - 48px)}
+/* Mantener visible la cabecera de columnas al bajar por el listado de OC.
+   Evitar que el contenedor horizontal capture el desplazamiento vertical. */
+@media (min-width: 901px){
+  #tableWrap.table-wrap{overflow:clip!important;overflow-clip-margin:0;border-radius:15px}
+  #tableWrap thead th{position:sticky!important;top:0!important;z-index:35;background:#f2f6fb;box-shadow:0 2px 5px rgba(23,54,93,.14)}
+}
 </style>
 </head>
 <body class="login-sidebar-hidden">
