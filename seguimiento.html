@@ -181,6 +181,8 @@ header #userEmail,header #sessionUser{display:none!important}
 
 .traytable{height:260px;min-height:160px;max-height:none;resize:none;overflow:auto!important}
 #trayModalCount{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;padding:10px 15px;border-radius:12px;background:#fff0a8;border:1px solid #e6bf42;color:#594000;font-size:16px;font-weight:800;box-shadow:0 2px 5px rgba(105,76,0,.10);font-variant-numeric:tabular-nums}
+#trayAlertOptions .tray-alert-option{display:flex;align-items:center;gap:9px}
+#trayAlertOptions .tray-state-count{margin-left:auto;min-width:26px;padding:4px 8px;border-radius:9px;background:#fff0a8;border:1px solid #e6bf42;color:#594000;text-align:center;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums}
 .tray-expand-btn{border:1px solid #c5d9ee;background:#fff;color:#17365d;border-radius:10px;padding:9px 13px;font-weight:750;cursor:pointer}
 .traytable::after{content:"";display:block;height:3px}
 .tray-modal[hidden]{display:none!important}
@@ -518,6 +520,9 @@ modal.querySelector('#selfForm').onsubmit=async e=>{e.preventDefault();const c=c
  const render=()=>{
   const activeCols=active(),data=selected(),table=$('trayModalHead').closest('table');
   $('trayModalCount').textContent=data.length+' registros';
+  const stateCounts=new Map();
+  (window.trayRows||[]).filter(x=>!selectedCcps.size||selectedCcps.has(x.periodo)).forEach(x=>stateCounts.set(x.alerta,(stateCounts.get(x.alerta)||0)+1));
+  $('trayAlertOptions').querySelectorAll('input[type=checkbox]').forEach(input=>{const badge=input.parentElement.querySelector('.tray-state-count');if(badge)badge.textContent=String(stateCounts.get(input.value)||0)});
   $('trayModalHead').innerHTML='<tr>'+activeCols.map(f=>'<th>'+escapeHtml(f[1])+'<span class="modal-col-resize" title="Arrastrar para ajustar el ancho"></span></th>').join('')+'</tr>';
   $('trayModalBody').innerHTML=data.map((x,i)=>'<tr>'+activeCols.map(f=>'<td>'+escapeHtml(f[2](x,i))+'</td>').join('')+'</tr>').join('');
   let cg=table.querySelector('colgroup');if(!cg){cg=document.createElement('colgroup');table.prepend(cg)}
@@ -537,7 +542,7 @@ modal.querySelector('#selfForm').onsubmit=async e=>{e.preventDefault();const c=c
   });
  };
  const close=()=>{$('trayModal').hidden=true;document.body.style.overflow='';};
- const open=()=>{selectedCcps=new Set(traySelectedCcps);$('trayCcpOptions').innerHTML=[...new Set((window.trayRows||[]).map(x=>x.periodo).filter(Boolean))].sort().map(x=>'<label class="tray-alert-option"><input type="checkbox" value="'+escapeHtml(x)+'" '+(selectedCcps.has(x)?'checked':'')+'> <span>'+escapeHtml(x)+'</span></label>').join('');$('trayCcpToggle').textContent=selectedCcps.size?[...selectedCcps].join(', ')+' ▾':'Todas las CCP ▾';$('trayCcpOptions').hidden=true;selectedAlerts.clear();$('trayAlertOptions').innerHTML=[...new Set((window.trayRows||[]).map(x=>x.alerta).filter(Boolean))].sort().map(x=>'<label class="tray-alert-option"><input type="checkbox" value="'+escapeHtml(x)+'"> <span>'+escapeHtml(x)+'</span></label>').join('');$('trayAlertOptions').hidden=true;$('trayAlertToggle').setAttribute('aria-expanded','false');$('trayAlertToggle').textContent='Todos los estados ▾';$('trayModalColumns').innerHTML=fields.map(f=>'<label><input type="checkbox" data-tray-col="'+f[0]+'" checked> '+escapeHtml(f[1])+'</label>').join('');visible=new Set(fields.map(f=>f[0]));$('trayModalColsToggle').checked=false;$('trayModalColumns').hidden=true;$('trayModal').hidden=false;document.body.style.overflow='hidden';render();};
+ const open=()=>{selectedCcps=new Set(traySelectedCcps);$('trayCcpOptions').innerHTML=[...new Set((window.trayRows||[]).map(x=>x.periodo).filter(Boolean))].sort().map(x=>'<label class="tray-alert-option"><input type="checkbox" value="'+escapeHtml(x)+'" '+(selectedCcps.has(x)?'checked':'')+'> <span>'+escapeHtml(x)+'</span></label>').join('');$('trayCcpToggle').textContent=selectedCcps.size?[...selectedCcps].join(', ')+' ▾':'Todas las CCP ▾';$('trayCcpOptions').hidden=true;selectedAlerts.clear();$('trayAlertOptions').innerHTML=[...new Set((window.trayRows||[]).map(x=>x.alerta).filter(Boolean))].sort().map(x=>'<label class="tray-alert-option"><input type="checkbox" value="'+escapeHtml(x)+'"> <span>'+escapeHtml(x)+'</span><span class="tray-state-count">0</span></label>').join('');$('trayAlertOptions').hidden=true;$('trayAlertToggle').setAttribute('aria-expanded','false');$('trayAlertToggle').textContent='Todos los estados ▾';$('trayModalColumns').innerHTML=fields.map(f=>'<label><input type="checkbox" data-tray-col="'+f[0]+'" checked> '+escapeHtml(f[1])+'</label>').join('');visible=new Set(fields.map(f=>f[0]));$('trayModalColsToggle').checked=false;$('trayModalColumns').hidden=true;$('trayModal').hidden=false;document.body.style.overflow='hidden';render();};
  const csvCell=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
  const download=(body,type,name)=>{const url=URL.createObjectURL(new Blob([body],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);};
  const grid=()=>[active().map(f=>f[1]),...values()];
