@@ -114,6 +114,15 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
 .ccp-warning-head button{background:#fff;border:1px solid #dce5f0;border-radius:10px;width:38px;height:38px;font-size:22px;color:#17365d}
 .ccp-warning-body{padding:24px;line-height:1.65;font-size:.92rem}
 .ccp-warning-actions{display:flex;justify-content:flex-end;padding:0 24px 22px}
+
+.sap-table-scroll{width:100%;max-width:100%;overflow-x:auto;overflow-y:auto;max-height:58vh;border:1px solid #dbe5f0;border-radius:12px;background:#fff;scrollbar-color:#9bb3ce #edf3f9}
+.sap-preview-table{border-collapse:separate;border-spacing:0;min-width:1900px;width:max-content;font-size:.79rem;color:#17365d}
+.sap-preview-table th{position:sticky;top:0;z-index:2;background:#eef4fa;color:#17365d;text-align:left;font-size:.72rem;white-space:nowrap;font-weight:800;padding:13px 12px;border-bottom:1px solid #d6e2ef}
+.sap-preview-table td{padding:11px 12px;border-bottom:1px solid #e4ebf3;max-width:300px;min-width:95px;overflow-wrap:anywhere;vertical-align:top}
+.sap-preview-table tbody tr:nth-child(even){background:#f7fafd}.sap-preview-table tbody tr:hover{background:#eaf3ff}
+.sap-preview-table th:nth-child(3),.sap-preview-table td:nth-child(3){font-weight:750}
+.sap-preview-table td:nth-child(5){min-width:230px}.sap-preview-table td:nth-child(13){min-width:280px}
+.sap-table-foot{font-size:.77rem;color:#536b86;margin:9px 3px 0}
 </style>
 </head>
 <body>
@@ -141,7 +150,7 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
 </section>
 <section id="results" hidden>
 <div class="summary"><div class="metric"><strong id="mTotal">0</strong><span>Registros analizados</span></div><div class="metric"><strong id="mLoc">0</strong><span>Nuevos locadores</span></div><div class="metric"><strong id="mOc">0</strong><span>Nuevas OC</span></div><div class="metric warn"><strong id="mDiff">0</strong><span>Diferencias</span></div><div class="metric err"><strong id="mErr">0</strong><span>Errores</span></div></div>
-<div class="review"><div class="review-head"><h2>Revisión previa <small style="font-size:.72rem;font-weight:500;color:#52647a">Pulsa una OC para ver todos los campos reconocidos del Excel</small></h2><div class="filters" id="filters"><button class="chip" data-f="all">Todos</button><button class="chip" data-f="nueva_oc">Nuevos</button><button class="chip active" data-f="diferencia">Diferencias</button><button class="chip" data-f="error">Errores</button><button class="chip" data-f="sin_cambios">Sin cambios</button></div></div><div class="items" id="items"></div></div>
+<div class="review"><div class="review-head"><h2>Revisión previa <small style="font-size:.72rem;font-weight:500;color:#52647a">Vista de tabla con todos los campos reconocidos del Excel</small></h2><div class="filters" id="filters"><button class="chip" data-f="all">Todos</button><button class="chip" data-f="nueva_oc">Nuevos</button><button class="chip active" data-f="diferencia">Diferencias</button><button class="chip" data-f="error">Errores</button><button class="chip" data-f="sin_cambios">Sin cambios</button></div></div><div class="items" id="items"></div></div>
 <div class="footerbar"><p id="confirmHint">Revisa el análisis antes de confirmar.</p><button class="btn primary" id="confirm">Confirmar importación</button></div>
 </section>
 </main>
@@ -209,18 +218,19 @@ function render(){const s=analysis.summary;$('#mTotal').textContent=s.total;$('#
 function renderItems(){
  const rows=analysis.results.filter(r=>filter==='all'||r.status===filter);
  const labels={nueva_oc:['Nueva OC','b-new'],diferencia:['Diferencia','b-diff'],error:['Error','b-error'],sin_cambios:['Sin cambios','b-same']};
- const fields=[['numero_oc','N.º OC'],['ruc','RUC'],['apellidos_nombres','Locador'],['expediente','Expediente'],['subgerencia','Área / subgerencia'],['monto_total','Monto total'],['fecha_emision','Fecha de emisión'],['fecha_inicio','Fecha de inicio'],['fecha_termino','Fecha de término'],['codigo_servicio','Código de servicio'],['descripcion_pedido','Descripción del pedido'],['cantidad','Cantidad'],['precio_unitario','Precio unitario'],['centro_costos','Centro de costos'],['fondo_financiero','Fondo financiero'],['solicitud_pedido','Solicitud de pedido']];
+ const fields=[['numero_oc','N.º OC'],['ruc','RUC'],['apellidos_nombres','Locador'],['expediente','Expediente'],['subgerencia','Área / subgerencia'],['monto_total','Monto total'],['fecha_emision','Emisión'],['fecha_inicio','Inicio'],['fecha_termino','Término'],['codigo_servicio','Código servicio'],['descripcion_pedido','Descripción pedido'],['cantidad','Cantidad'],['precio_unitario','Precio unitario'],['centro_costos','Centro costos'],['fondo_financiero','Fondo financiero'],['solicitud_pedido','Solicitud pedido']];
  const cell=v=>{if(v===null||v===undefined||v==='')return '—';if(v instanceof Date)return v.toLocaleDateString('es-PE');return String(v)};
- $('#items').innerHTML=rows.slice(0,250).map(r=>{
+ const headers=['Fila','Resultado',...fields.map(x=>x[1]),'Observaciones'];
+ const body=rows.slice(0,250).map(r=>{
   const [lab,cl]=labels[r.status];
   const source=parsedRows.find(x=>String(x.numero_oc??'').replace(/\\D/g,'')===String(r.numero_oc??'').replace(/\\D/g,'')&&String(x.ruc??'').replace(/\\D/g,'')===String(r.ruc??'').replace(/\\D/g,''));
-  const details=fields.map(([key,label])=>'<div class="oc-detail-field"><span>'+esc(label)+'</span><strong>'+esc(cell(source?.[key]))+'</strong></div>').join('');
-  const ch=(r.cambios||[]).map(c=>'<div class="change"><b>'+esc(c.campo)+':</b> Supabase: '+esc(c.actual??'vacío')+' → Excel: '+esc(c.excel??'vacío')+'</div>').join('');
-  const er=(r.errores||[]).map(x=>'<div class="change">⚠ '+esc(x)+'</div>').join('');
-  return '<article class="item compact"><button type="button" class="item-top oc-detail-toggle" aria-expanded="false"><div><strong>'+esc(r.nombre||'Sin nombre')+'</strong><div class="meta">RUC '+esc(r.ruc)+' · OC '+esc(r.numero_oc)+' · fila '+esc(r.fila)+'</div></div><span class="badge '+cl+'">'+lab+'</span></button><div class="oc-detail-content"><div class="oc-detail-title">Datos leídos del Excel de SAP · '+esc($('#ccp').value)+'</div><div class="oc-detail-grid">'+details+'</div>'+(ch||er?'<div class="changes">'+ch+er+'</div>':'')+'</div></article>';
- }).join('')||'<div class="item">No hay registros en esta categoría.</div>';
+  const ch=(r.cambios||[]).map(c=>esc(c.campo)+': '+esc(c.actual??'vacío')+' → '+esc(c.excel??'vacío')).join('; ');
+  const er=(r.errores||[]).map(esc).join('; ');
+  return '<tr><td>'+esc(r.fila)+'</td><td><span class="badge '+cl+'">'+lab+'</span></td>'+fields.map(([key])=>'<td>'+esc(cell(source?.[key]))+'</td>').join('')+'<td>'+((ch||er)||'—')+'</td></tr>';
+ }).join('');
+ $('#items').innerHTML=rows.length?'<div class="sap-table-scroll" tabindex="0" role="region" aria-label="Vista de tabla de órdenes de compra del Excel"><table class="sap-preview-table"><thead><tr>'+headers.map(h=>'<th scope="col">'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div><p class="sap-table-foot">Vista de tabla · '+rows.length+' registros · Desplázate horizontalmente para consultar todos los campos del Excel de SAP. No se ha guardado ningún dato.</p>':'<div class="item">No hay registros en esta categoría.</div>';
 }
-$('#filters').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;filter=b.dataset.f;document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x===b));renderItems()};$('#items').onclick=e=>{const top=e.target.closest('.oc-detail-toggle');if(top){const item=top.closest('.item');item.classList.toggle('compact');top.setAttribute('aria-expanded',String(!item.classList.contains('compact')))}};
+$('#filters').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;filter=b.dataset.f;document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x===b));renderItems()};
 $('#confirm').onclick=async()=>{if(!analysis)return;const sanitize=analysis.summary.diferencias>0;const question=sanitize?'¿Confirmas el saneamiento? Se corregirán en Supabase únicamente los campos provenientes del Excel oficial. Los datos de gestión se conservarán.':'¿Confirmas la importación de las nuevas órdenes de compra a Supabase?';if(!confirm(question))return;try{$('#confirm').disabled=true;$('#confirm').textContent='Guardando…';const r=await invoke(sanitize?'sanitize':'confirm');$('#s3').className='step done';$('#s4').className='step done';$('#confirmHint').textContent='Proceso completado: '+(r.actualizadas||0)+' OC corregidas, '+r.insertadas+' OC nuevas y '+r.nuevos_locadores+' locadores nuevos.';$('#confirm').textContent='Proceso completado';$('#confirm').disabled=true}catch(e){alert(e.message);$('#confirm').disabled=false;$('#confirm').textContent=sanitize?'Confirmar saneamiento':'Confirmar importación'}};
 </script><script id="sidebar-controller">(()=>{const side=document.getElementById('appSidebar'),logout=document.getElementById('sidebarLogout');if(!side)return;logout?.addEventListener('click',()=>document.getElementById('logout')?.click());})();</script><script>
 document.getElementById('downloadContingency').addEventListener('click',()=>{
