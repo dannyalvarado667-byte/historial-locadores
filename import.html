@@ -274,8 +274,8 @@ function renderItems(){
 }
 function setPreviewFilter(e){const b=e.target.closest('[data-f]');if(!b)return;filter=b.dataset.f;renderItems()}
 $('#filters').onclick=setPreviewFilter;$('#expandedFilters').onclick=setPreviewFilter;
-const closeExpandedPreview=()=>{$('#expandedPreviewModal').hidden=true;document.body.classList.remove('expanded-preview-open');$('#expandPreview').focus()};
-$('#expandPreview').onclick=()=>{if(!analysis)return;renderItems();$('#expandedPreviewModal').hidden=false;document.body.classList.add('expanded-preview-open');$('#closeExpandedPreview').focus()};
+const closeExpandedPreview=()=>{$('#expandedPreviewModal').hidden=true;document.body.classList.remove('expanded-preview-open');if(window.parent!==window)window.parent.postMessage({type:'locadores:preview-expanded',open:false},location.origin);$('#expandPreview').focus()};
+$('#expandPreview').onclick=()=>{if(!analysis)return;renderItems();$('#expandedPreviewModal').hidden=false;document.body.classList.add('expanded-preview-open');if(window.parent!==window)window.parent.postMessage({type:'locadores:preview-expanded',open:true},location.origin);$('#closeExpandedPreview').focus()};
 $('#closeExpandedPreview').onclick=closeExpandedPreview;$('#closeExpandedPreviewBottom').onclick=closeExpandedPreview;
 $('#expandedPreviewModal').addEventListener('click',e=>{if(e.target===$('#expandedPreviewModal'))closeExpandedPreview()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#expandedPreviewModal').hidden)closeExpandedPreview()});
