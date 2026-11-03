@@ -135,6 +135,17 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
 .contingency-download-row p strong{color:var(--navy)}
 .contingency-download-row button{flex-shrink:0;white-space:nowrap}
 @media(max-width:650px){.contingency-download-row{flex-direction:column;align-items:stretch}.contingency-download-row button{width:100%}}
+
+.expanded-preview-overlay{position:fixed;inset:0;z-index:99990;background:#102b4b9c;display:flex;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(3px)}
+.expanded-preview-dialog{background:#f4f7fb;border-radius:17px;display:flex;flex-direction:column;width:min(96vw,1800px);height:min(92vh,1000px);overflow:hidden;box-shadow:0 22px 70px #0b254d55;color:#17365d}
+.expanded-preview-header{background:#1d416d;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:3px solid #078b9c;gap:14px}
+.expanded-preview-header h2{font-size:1.12rem;margin:0 0 4px}.expanded-preview-header p{font-size:.76rem;margin:0;color:#e3ecf7}
+.expanded-preview-header button{width:38px;height:38px;border:0;border-radius:10px;background:#fff;color:#17365d;font-size:24px}
+.expanded-preview-controls{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 18px}
+.expanded-preview-controls strong{font-size:.85rem}.expanded-preview-items{flex:1;min-height:0;padding:0 18px 12px;display:flex;flex-direction:column}
+.expanded-preview-items .sap-table-scroll{max-height:none;height:100%;flex:1}.expanded-preview-bottom{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid #dbe5f0;background:#fff;gap:12px;font-size:.77rem;color:#52647a}
+body.expanded-preview-open{overflow:hidden}
+@media(max-width:650px){.expanded-preview-overlay{padding:5px}.expanded-preview-dialog{width:100%;height:96vh}.expanded-preview-header{padding:12px}.expanded-preview-controls{padding:10px}.expanded-preview-items{padding:0 8px 8px}}
 </style>
 </head>
 <body>
@@ -159,10 +170,11 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
 </section>
 <section id="results" hidden>
 <div class="summary"><div class="metric"><strong id="mTotal">0</strong><span>Registros analizados</span></div><div class="metric"><strong id="mLoc">0</strong><span>Nuevos locadores</span></div><div class="metric"><strong id="mOc">0</strong><span>Nuevas OC</span></div><div class="metric warn"><strong id="mDiff">0</strong><span>Diferencias</span></div><div class="metric err"><strong id="mErr">0</strong><span>Errores</span></div></div>
-<div class="review"><div class="review-head"><h2>Revisión previa <small style="font-size:.72rem;font-weight:500;color:#52647a">Vista de tabla con todos los campos reconocidos del Excel</small></h2><div class="filters" id="filters"><button class="chip" data-f="all">Todos</button><button class="chip" data-f="nueva_oc">Nuevos</button><button class="chip active" data-f="diferencia">Diferencias</button><button class="chip" data-f="error">Errores</button><button class="chip" data-f="sin_cambios">Sin cambios</button></div></div><div class="items" id="items"></div></div>
+<div class="review"><div class="review-head"><h2>Revisión previa <small style="font-size:.72rem;font-weight:500;color:#52647a">Vista de tabla con todos los campos reconocidos del Excel</small></h2><div class="filters" id="filters"><button class="chip" data-f="all">Todos</button><button class="chip" data-f="nueva_oc">Nuevos</button><button class="chip active" data-f="diferencia">Diferencias</button><button class="chip" data-f="error">Errores</button><button class="chip" data-f="sin_cambios">Sin cambios</button><button type="button" class="chip" id="expandPreview">⛶ Ampliar</button></div></div><div class="items" id="items"></div></div>
 <div class="footerbar"><p id="confirmHint">Revisa el análisis antes de confirmar.</p><button class="btn primary" id="confirm">Confirmar importación</button></div>
 </section>
 </main>
+<div id="expandedPreviewModal" class="expanded-preview-overlay" hidden><section class="expanded-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="expandedPreviewTitle"><div class="expanded-preview-header"><div><h2 id="expandedPreviewTitle">Revisión previa · Vista ampliada</h2><p>Órdenes de compra del Excel de SAP · Solo lectura</p></div><button type="button" id="closeExpandedPreview" aria-label="Cerrar vista ampliada">×</button></div><div class="expanded-preview-controls"><strong id="expandedPreviewCount"></strong><div class="filters" id="expandedFilters"><button class="chip" data-f="all">Todos</button><button class="chip" data-f="nueva_oc">Nuevos</button><button class="chip" data-f="diferencia">Diferencias</button><button class="chip" data-f="error">Errores</button><button class="chip" data-f="sin_cambios">Sin cambios</button></div></div><div id="expandedPreviewItems" class="expanded-preview-items"></div><div class="expanded-preview-bottom"><span>Esta vista no modifica ni importa datos.</span><button class="btn primary" type="button" id="closeExpandedPreviewBottom">Cerrar</button></div></section></div>
 <div id="missingCcpModal" class="ccp-warning-overlay" hidden><section class="ccp-warning-dialog" role="alertdialog" aria-modal="true" aria-labelledby="missingCcpTitle" aria-describedby="missingCcpText"><div class="ccp-warning-head"><div><h2 id="missingCcpTitle">Selecciona una CCP</h2><p>Dato obligatorio para continuar</p></div><button id="missingCcpClose" type="button" aria-label="Cerrar">×</button></div><div class="ccp-warning-body" id="missingCcpText">Antes de analizar el archivo de SAP, selecciona la CCP configurada a la que pertenecen las órdenes de compra. No se ha importado ningún registro.</div><div class="ccp-warning-actions"><button id="missingCcpOk" class="btn primary" type="button">Aceptar</button></div></section></div>
 
 <script type="module">
@@ -251,9 +263,19 @@ function renderItems(){
   const er=(r.errores||[]).map(esc).join('; ');
   return '<tr><td>'+esc(r.fila)+'</td><td><span class="badge '+cl+'">'+lab+'</span></td>'+fields.map(([key])=>'<td>'+esc(cell(source?.[key]))+'</td>').join('')+'<td>'+((ch||er)||'—')+'</td></tr>';
  }).join('');
- $('#items').innerHTML=rows.length?'<div class="sap-table-scroll" tabindex="0" role="region" aria-label="Vista de tabla de órdenes de compra del Excel"><table class="sap-preview-table"><thead><tr>'+headers.map(h=>'<th scope="col">'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div><p class="sap-table-foot">Vista de tabla · '+rows.length+' registros · Desplázate horizontalmente para consultar todos los campos del Excel de SAP. No se ha guardado ningún dato.</p>':'<div class="item">No hay registros en esta categoría.</div>';
+ const html=rows.length?'<div class="sap-table-scroll" tabindex="0" role="region" aria-label="Vista de tabla de órdenes de compra del Excel"><table class="sap-preview-table"><thead><tr>'+headers.map(h=>'<th scope="col">'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div><p class="sap-table-foot">Vista de tabla · '+rows.length+' registros · Desplázate horizontalmente para consultar todos los campos del Excel de SAP. No se ha guardado ningún dato.</p>' :'<div class="item">No hay registros en esta categoría.</div>';
+ $('#items').innerHTML=html;
+ $('#expandedPreviewItems').innerHTML=html;
+ $('#expandedPreviewCount').textContent=rows.length+' de '+analysis.results.length+' registros · '+($('#ccp').value||'CCP no seleccionada');
+ document.querySelectorAll('#filters [data-f],#expandedFilters [data-f]').forEach(x=>x.classList.toggle('active',x.dataset.f===filter));
 }
-$('#filters').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;filter=b.dataset.f;document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x===b));renderItems()};
+function setPreviewFilter(e){const b=e.target.closest('[data-f]');if(!b)return;filter=b.dataset.f;renderItems()}
+$('#filters').onclick=setPreviewFilter;$('#expandedFilters').onclick=setPreviewFilter;
+const closeExpandedPreview=()=>{$('#expandedPreviewModal').hidden=true;document.body.classList.remove('expanded-preview-open');$('#expandPreview').focus()};
+$('#expandPreview').onclick=()=>{if(!analysis)return;renderItems();$('#expandedPreviewModal').hidden=false;document.body.classList.add('expanded-preview-open');$('#closeExpandedPreview').focus()};
+$('#closeExpandedPreview').onclick=closeExpandedPreview;$('#closeExpandedPreviewBottom').onclick=closeExpandedPreview;
+$('#expandedPreviewModal').addEventListener('click',e=>{if(e.target===$('#expandedPreviewModal'))closeExpandedPreview()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#expandedPreviewModal').hidden)closeExpandedPreview()});
 $('#confirm').onclick=async()=>{if(!analysis)return;const sanitize=analysis.summary.diferencias>0;const question=sanitize?'¿Confirmas el saneamiento? Se corregirán en Supabase únicamente los campos provenientes del Excel oficial. Los datos de gestión se conservarán.':'¿Confirmas la importación de las nuevas órdenes de compra a Supabase?';if(!confirm(question))return;try{$('#confirm').disabled=true;$('#confirm').textContent='Guardando…';const r=await invoke(sanitize?'sanitize':'confirm');$('#confirmHint').textContent='Proceso completado: '+(r.actualizadas||0)+' OC corregidas, '+r.insertadas+' OC nuevas y '+r.nuevos_locadores+' locadores nuevos.';$('#confirm').textContent='Proceso completado';$('#confirm').disabled=true}catch(e){alert(e.message);$('#confirm').disabled=false;$('#confirm').textContent=sanitize?'Confirmar saneamiento':'Confirmar importación'}};
 </script><script id="sidebar-controller">(()=>{const side=document.getElementById('appSidebar'),logout=document.getElementById('sidebarLogout');if(!side)return;logout?.addEventListener('click',()=>document.getElementById('logout')?.click());})();</script><script>
 document.getElementById('downloadContingency').addEventListener('click',()=>{
