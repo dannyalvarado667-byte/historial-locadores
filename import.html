@@ -93,6 +93,19 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
   main .btn-primary, main button.primary, main .primary,
   main .btn-primary *, main button.primary * { color: #fff; }
 }
+
+/* Revisión detallada de SAP: misma identidad visual institucional. */
+.oc-detail-toggle{width:100%;border:0;background:transparent;text-align:left;padding:0;color:inherit;font:inherit;display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer}
+.oc-detail-toggle:focus-visible{outline:2px solid var(--blue);outline-offset:5px;border-radius:6px}
+.oc-detail-content{margin-top:14px;padding-top:13px;border-top:1px solid var(--line)}
+.item.compact .oc-detail-content{display:none}
+.oc-detail-title{color:var(--navy);font-size:.81rem;font-weight:800;margin-bottom:12px}
+.oc-detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.oc-detail-field{background:#f5f8fc;border:1px solid #e1e9f3;border-radius:9px;padding:10px 12px;min-width:0}
+.oc-detail-field span{display:block;font-size:.69rem;color:#52647a;font-weight:700;margin-bottom:5px}
+.oc-detail-field strong{display:block;font-size:.8rem;color:var(--navy);font-weight:650;overflow-wrap:anywhere;white-space:pre-wrap}
+@media(max-width:760px){.oc-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:440px){.oc-detail-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -120,7 +133,7 @@ body:has(#modalCompactFlag) #appSidebar{display:none!important}
 </section>
 <section id="results" hidden>
 <div class="summary"><div class="metric"><strong id="mTotal">0</strong><span>Registros analizados</span></div><div class="metric"><strong id="mLoc">0</strong><span>Nuevos locadores</span></div><div class="metric"><strong id="mOc">0</strong><span>Nuevas OC</span></div><div class="metric warn"><strong id="mDiff">0</strong><span>Diferencias</span></div><div class="metric err"><strong id="mErr">0</strong><span>Errores</span></div></div>
-<div class="review"><div class="review-head"><h2>Revisión previa</h2><div class="filters" id="filters"><button class="chip" data-f="all">Todos</button><button class="chip" data-f="nueva_oc">Nuevos</button><button class="chip active" data-f="diferencia">Diferencias</button><button class="chip" data-f="error">Errores</button><button class="chip" data-f="sin_cambios">Sin cambios</button></div></div><div class="items" id="items"></div></div>
+<div class="review"><div class="review-head"><h2>Revisión previa <small style="font-size:.72rem;font-weight:500;color:#52647a">Pulsa una OC para ver todos los campos reconocidos del Excel</small></h2><div class="filters" id="filters"><button class="chip" data-f="all">Todos</button><button class="chip" data-f="nueva_oc">Nuevos</button><button class="chip active" data-f="diferencia">Diferencias</button><button class="chip" data-f="error">Errores</button><button class="chip" data-f="sin_cambios">Sin cambios</button></div></div><div class="items" id="items"></div></div>
 <div class="footerbar"><p id="confirmHint">Revisa el análisis antes de confirmar.</p><button class="btn primary" id="confirm">Confirmar importación</button></div>
 </section>
 </main>
@@ -182,8 +195,21 @@ function showErr(e){$('#msg').textContent=e.message||String(e);$('#msg').classNa
 async function invoke(action){const {data:{session}}=await supabase.auth.getSession();const res=await fetch('https://acckrmanpgycunpvmfrl.supabase.co/functions/v1/import-oc',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':'sb_publishable_2nDjJmqL9oNdWGcpm3MgnQ_KXg5WuBI'},body:JSON.stringify({action,ccp:$('#ccp').value.trim(),nombre_archivo:fileName,rows:parsedRows})});const data=await res.json();if(!res.ok)throw new Error(data.error||'No se pudo completar la operación.');return data}
 $('#analyze').onclick=async()=>{try{if(!$('#ccp').value.trim())throw new Error('Selecciona primero una CCP configurada en Administración.');$('#analyze').disabled=true;$('#analyze').textContent='Analizando…';parsedRows=parseSheet();analysis=await invoke('analyze');render();$('#results').hidden=false;$('#s1').className='step done';$('#s2').className='step done';$('#s3').className='step active';$('#results').scrollIntoView({behavior:'smooth',block:'start'});$('#msg').textContent='Análisis completado. Ningún dato ha sido guardado.';$('#msg').className='message success'}catch(e){showErr(e)}finally{$('#analyze').disabled=false;$('#analyze').textContent='Analizar archivo'}};
 function render(){const s=analysis.summary;$('#mTotal').textContent=s.total;$('#mLoc').textContent=s.nuevos_locadores;$('#mOc').textContent=s.nuevas_oc;$('#mDiff').textContent=s.diferencias;$('#mErr').textContent=s.errores;const blocked=s.errores>0;$('#confirm').disabled=blocked;$('#confirm').textContent=s.diferencias>0?'Confirmar saneamiento':'Confirmar importación';$('#confirmHint').textContent=s.errores>0?'Hay errores que deben corregirse antes de continuar.':s.diferencias>0?'Modo saneamiento: se corregirán únicamente los campos provenientes del Excel oficial. Los datos de gestión se conservarán.':'Validación limpia. Puedes confirmar la importación.';renderItems()}
-function renderItems(){const rows=analysis.results.filter(r=>filter==='all'||r.status===filter);const labels={nueva_oc:['Nueva OC','b-new'],diferencia:['Diferencia','b-diff'],error:['Error','b-error'],sin_cambios:['Sin cambios','b-same']};$('#items').innerHTML=rows.slice(0,250).map(r=>{const [lab,cl]=labels[r.status];const ch=(r.cambios||[]).map(c=>'<div class="change"><b>'+esc(c.campo)+':</b> Supabase: '+esc(c.actual??'vacío')+' → Excel: '+esc(c.excel??'vacío')+'</div>').join('');const er=(r.errores||[]).map(x=>'<div class="change">⚠ '+esc(x)+'</div>').join('');return '<article class="item compact"><div class="item-top"><div><strong>'+esc(r.nombre||'Sin nombre')+'</strong><div class="meta">RUC '+esc(r.ruc)+' · OC '+esc(r.numero_oc)+' · fila '+esc(r.fila)+'</div></div><span class="badge '+cl+'">'+lab+'</span></div>'+(ch||er?'<div class="changes">'+ch+er+'</div>':'')+'</article>'}).join('')||'<div class="item">No hay registros en esta categoría.</div>'}
-$('#filters').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;filter=b.dataset.f;document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x===b));renderItems()};$('#items').onclick=e=>{const top=e.target.closest('.item-top');if(top)top.closest('.item').classList.toggle('compact')};
+function renderItems(){
+ const rows=analysis.results.filter(r=>filter==='all'||r.status===filter);
+ const labels={nueva_oc:['Nueva OC','b-new'],diferencia:['Diferencia','b-diff'],error:['Error','b-error'],sin_cambios:['Sin cambios','b-same']};
+ const fields=[['numero_oc','N.º OC'],['ruc','RUC'],['apellidos_nombres','Locador'],['expediente','Expediente'],['subgerencia','Área / subgerencia'],['monto_total','Monto total'],['fecha_emision','Fecha de emisión'],['fecha_inicio','Fecha de inicio'],['fecha_termino','Fecha de término'],['codigo_servicio','Código de servicio'],['descripcion_pedido','Descripción del pedido'],['cantidad','Cantidad'],['precio_unitario','Precio unitario'],['centro_costos','Centro de costos'],['fondo_financiero','Fondo financiero'],['solicitud_pedido','Solicitud de pedido']];
+ const cell=v=>{if(v===null||v===undefined||v==='')return '—';if(v instanceof Date)return v.toLocaleDateString('es-PE');return String(v)};
+ $('#items').innerHTML=rows.slice(0,250).map(r=>{
+  const [lab,cl]=labels[r.status];
+  const source=parsedRows.find(x=>String(x.numero_oc??'').replace(/\\D/g,'')===String(r.numero_oc??'').replace(/\\D/g,'')&&String(x.ruc??'').replace(/\\D/g,'')===String(r.ruc??'').replace(/\\D/g,''));
+  const details=fields.map(([key,label])=>'<div class="oc-detail-field"><span>'+esc(label)+'</span><strong>'+esc(cell(source?.[key]))+'</strong></div>').join('');
+  const ch=(r.cambios||[]).map(c=>'<div class="change"><b>'+esc(c.campo)+':</b> Supabase: '+esc(c.actual??'vacío')+' → Excel: '+esc(c.excel??'vacío')+'</div>').join('');
+  const er=(r.errores||[]).map(x=>'<div class="change">⚠ '+esc(x)+'</div>').join('');
+  return '<article class="item compact"><button type="button" class="item-top oc-detail-toggle" aria-expanded="false"><div><strong>'+esc(r.nombre||'Sin nombre')+'</strong><div class="meta">RUC '+esc(r.ruc)+' · OC '+esc(r.numero_oc)+' · fila '+esc(r.fila)+'</div></div><span class="badge '+cl+'">'+lab+'</span></button><div class="oc-detail-content"><div class="oc-detail-title">Datos leídos del Excel de SAP · '+esc($('#ccp').value)+'</div><div class="oc-detail-grid">'+details+'</div>'+(ch||er?'<div class="changes">'+ch+er+'</div>':'')+'</div></article>';
+ }).join('')||'<div class="item">No hay registros en esta categoría.</div>';
+}
+$('#filters').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;filter=b.dataset.f;document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x===b));renderItems()};$('#items').onclick=e=>{const top=e.target.closest('.oc-detail-toggle');if(top){const item=top.closest('.item');item.classList.toggle('compact');top.setAttribute('aria-expanded',String(!item.classList.contains('compact')))}};
 $('#confirm').onclick=async()=>{if(!analysis)return;const sanitize=analysis.summary.diferencias>0;const question=sanitize?'¿Confirmas el saneamiento? Se corregirán en Supabase únicamente los campos provenientes del Excel oficial. Los datos de gestión se conservarán.':'¿Confirmas la importación de las nuevas órdenes de compra a Supabase?';if(!confirm(question))return;try{$('#confirm').disabled=true;$('#confirm').textContent='Guardando…';const r=await invoke(sanitize?'sanitize':'confirm');$('#s3').className='step done';$('#s4').className='step done';$('#confirmHint').textContent='Proceso completado: '+(r.actualizadas||0)+' OC corregidas, '+r.insertadas+' OC nuevas y '+r.nuevos_locadores+' locadores nuevos.';$('#confirm').textContent='Proceso completado';$('#confirm').disabled=true}catch(e){alert(e.message);$('#confirm').disabled=false;$('#confirm').textContent=sanitize?'Confirmar saneamiento':'Confirmar importación'}};
 </script><script id="sidebar-controller">(()=>{const side=document.getElementById('appSidebar'),logout=document.getElementById('sidebarLogout');if(!side)return;logout?.addEventListener('click',()=>document.getElementById('logout')?.click());})();</script><script>
 document.getElementById('downloadContingency').addEventListener('click',()=>{
