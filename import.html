@@ -257,14 +257,14 @@ function renderItems(){
  const rows=analysis.results.filter(r=>filter==='all'||r.status===filter);
  const labels={nueva_oc:['Nueva OC','b-new'],diferencia:['Diferencia','b-diff'],error:['Error','b-error'],sin_cambios:['Sin cambios','b-same']};
  const fields=[['numero_oc','N.º OC'],['ruc','RUC'],['apellidos_nombres','Locador'],['expediente','Expediente'],['subgerencia','Área / subgerencia'],['monto_total','Monto total'],['fecha_emision','Emisión'],['fecha_inicio','Inicio'],['fecha_termino','Término'],['codigo_servicio','Código servicio'],['descripcion_pedido','Descripción pedido'],['cantidad','Cantidad'],['precio_unitario','Precio unitario'],['centro_costos','Centro costos'],['fondo_financiero','Fondo financiero'],['solicitud_pedido','Solicitud pedido']];
- const cell=v=>{if(v===null||v===undefined||v==='')return '—';if(v instanceof Date)return v.toLocaleDateString('es-PE');return String(v)};
+ const cell=(v,key)=>{if(v===null||v===undefined||v==='')return '—';if(['fecha_emision','fecha_inicio','fecha_termino'].includes(key)){const str=v instanceof Date?v.toISOString().slice(0,10):String(v).trim();const m=str.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(m)return `${m[3]}/${m[2]}/${m[1]}`;}if(v instanceof Date)return v.toLocaleDateString('es-PE');return String(v)};
  const headers=['Fila','Resultado',...fields.map(x=>x[1]),'Observaciones'];
  const body=rows.slice(0,250).map(r=>{
   const [lab,cl]=labels[r.status];
   const source=parsedRows.find(x=>String(x.numero_oc??'').replace(/\\D/g,'')===String(r.numero_oc??'').replace(/\\D/g,'')&&String(x.ruc??'').replace(/\\D/g,'')===String(r.ruc??'').replace(/\\D/g,''));
   const ch=(r.cambios||[]).map(c=>esc(c.campo)+': '+esc(c.actual??'vacío')+' → '+esc(c.excel??'vacío')).join('; ');
   const er=(r.errores||[]).map(esc).join('; ');
-  return '<tr><td>'+esc(r.fila)+'</td><td><span class="badge '+cl+'">'+lab+'</span></td>'+fields.map(([key])=>'<td>'+esc(cell(source?.[key]))+'</td>').join('')+'<td>'+((ch||er)||'—')+'</td></tr>';
+  return '<tr><td>'+esc(r.fila)+'</td><td><span class="badge '+cl+'">'+lab+'</span></td>'+fields.map(([key])=>'<td>'+esc(cell(source?.[key],key))+'</td>').join('')+'<td>'+((ch||er)||'—')+'</td></tr>';
  }).join('');
  const html=rows.length?'<div class="sap-table-scroll" tabindex="0" role="region" aria-label="Vista de tabla de órdenes de compra del Excel"><table class="sap-preview-table"><thead><tr>'+headers.map(h=>'<th scope="col">'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div><p class="sap-table-foot">Vista de tabla · '+rows.length+' registros · Desplázate horizontalmente para consultar todos los campos del Excel de SAP. No se ha guardado ningún dato.</p>' :'<div class="item">No hay registros en esta categoría.</div>';
  $('#items').innerHTML=html;
