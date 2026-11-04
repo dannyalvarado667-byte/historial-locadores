@@ -824,7 +824,7 @@ body.login-sidebar-hidden>header,body.login-sidebar-hidden>.shell>header{margin-
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
   <script type="module">
-function ordenarPeriodosCCP(a,b){const meses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','setiembre','octubre','noviembre','diciembre'];const key=v=>{const t=String(v||'').toLowerCase(),year=Number((t.match(/20\d{2}/)||['0'])[0]);let month=13;for(let i=0;i<meses.length;i++){if(t.includes(meses[i])||(i===8&&t.includes('septiembre'))){month=i+1;break}}return year*100+month};return key(a)-key(b)||String(a).localeCompare(String(b),'es',{numeric:true})})}
+function ordenarPeriodosCCP(a,b){const meses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','setiembre','octubre','noviembre','diciembre'];const key=v=>{const t=String(v||'').toLowerCase(),year=Number((t.match(/20\d{2}/)||['0'])[0]);let month=13;for(let i=0;i<meses.length;i++){if(t.includes(meses[i])||(i===8&&t.includes('septiembre'))){month=i+1;break}}return year*100+month};return key(a)-key(b)||String(a).localeCompare(String(b),'es',{numeric:true})}
 
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
