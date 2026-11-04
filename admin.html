@@ -776,7 +776,7 @@ const render=()=>{
  const term=el('auditSearch').value.trim().toLowerCase();
  const op=el('auditOperation').value;
  const filtered=all.filter(e=>(!op||e.operacion===op)&&(!term||JSON.stringify(e).toLowerCase().includes(term)));
- el('auditBody').innerHTML=filtered.map(e=>'<tr><td>'+safe(fmt(e.fecha))+'</td><td>'+safe(categories[e.tabla]||e.tabla)+'</td><td>'+safe({INSERT:'CREACIÓN',UPDATE:'MODIFICACIÓN',DELETE:'ELIMINACIÓN'}[e.operacion]||e.operacion)+'</td><td>'+safe(e.registro_id)+'</td><td>'+safe(e.usuario_id||'No identificado')+'</td><td style="max-width:440px;overflow-wrap:anywhere"><details><summary>'+safe(describe(e).slice(0,140))+'</summary><div style="margin-top:8px"><strong>Antes:</strong><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+safe(JSON.stringify(e.datos_anteriores,null,2))+'</pre><strong>Después:</strong><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+safe(JSON.stringify(e.datos_nuevos,null,2))+'</pre></div></details></td></tr>').join('')||'<tr><td colspan="6">No hay eventos coincidentes.</td></tr>';
+ el('auditBody').innerHTML=filtered.map(e=>'<tr><td>'+safe(fmt(e.fecha))+'</td><td>'+safe(categories[e.tabla]||e.tabla)+'</td><td>'+safe({INSERT:'CREACIÓN',UPDATE:'MODIFICACIÓN',DELETE:'ELIMINACIÓN'}[e.operacion]||e.operacion)+'</td><td title="ID interno: '+safe(e.registro_id)+'">'+safe(e.registro_descripcion||e.registro_id)+(e.locador_descripcion?'<div style="font-size:11px;color:#53647a">'+safe(e.locador_descripcion)+'</div>':'')+'</td><td title="ID usuario: '+safe(e.usuario_id||'No disponible')+'">'+safe(e.usuario_nombre||'No identificado')+'</td><td style="max-width:440px;overflow-wrap:anywhere"><details><summary>'+safe(describe(e).slice(0,140))+'</summary><div style="margin-top:8px"><strong>Antes:</strong><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+safe(JSON.stringify(e.datos_anteriores,null,2))+'</pre><strong>Después:</strong><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+safe(JSON.stringify(e.datos_nuevos,null,2))+'</pre></div></details></td></tr>').join('')||'<tr><td colspan="6">No hay eventos coincidentes.</td></tr>';
  el('auditStatus').textContent=all.length+' evento(s) cargados. Los filtros de búsqueda se aplican a los eventos cargados.';
 };
 const load=async(reset=true)=>{
@@ -784,9 +784,7 @@ const load=async(reset=true)=>{
  try{
   const {data:{user}}=await db.auth.getUser();if(!user)throw Error('Debes iniciar sesión.');
   if(reset){offset=0;all=[]}
-  let q=db.from('auditoria_sistema').select('id,fecha,tabla,operacion,registro_id,usuario_id,datos_anteriores,datos_nuevos').order('fecha',{ascending:false}).range(offset,offset+99);
-  if(tab)q=q.in('tabla',tab.split(','));
-  const {data,error}=await q;if(error)throw error;
+  const {data,error}=await db.rpc('consultar_auditoria_legible',{p_limite:100,p_desde:offset,p_tablas:tab?tab.split(','):null});if(error)throw error;
   all.push(...(data||[]));offset+=data?.length||0;el('auditMore').hidden=(data||[]).length<100;render();
  }catch(e){el('auditStatus').textContent='No se pudo consultar: '+(e.message||e)}
  finally{busy=false;el('auditRefresh').disabled=false}
