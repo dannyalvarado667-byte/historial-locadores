@@ -496,7 +496,8 @@ header #userEmail,header #sessionUser{display:none!important}
 <button type="button" class="btn" data-audit-table="">Todos</button>
 <button type="button" class="btn" data-audit-table="ordenes_compra">Órdenes de compra</button>
 <button type="button" class="btn" data-audit-table="historial_revisiones_pago">Movimientos</button>
-<button type="button" class="btn" data-audit-table="seguimiento_oc">Fechas MPD y seguimiento</button>
+<button type="button" class="btn" data-audit-table="seguimiento_oc" data-audit-kind="seguimiento">Seguimiento de entregables</button>
+<button type="button" class="btn" data-audit-table="seguimiento_oc" data-audit-kind="mpd">Registro de fechas MPD</button>
 <button type="button" class="btn" data-audit-table="ccp_configuracion,ccp_excepciones">Configuración CCP</button>
 <button type="button" class="btn" data-audit-table="importaciones_oc,importacion_oc_auditoria,importaciones_historial_pago">Importaciones</button>
 <button type="button" class="btn" data-audit-table="locadores">Locadores</button></div>
@@ -762,8 +763,10 @@ import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2
 const db=createClient('https://acckrmanpgycunpvmfrl.supabase.co','sb_publishable_2nDjJmqL9oNdWGcpm3MgnQ_KXg5WuBI');
 const el=id=>document.getElementById(id);
 const safe=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-let tab='',offset=0,all=[],busy=false;
+let tab='',kind='',offset=0,all=[],busy=false;
 const categories={ordenes_compra:'Órdenes de compra',historial_revisiones_pago:'Movimientos',seguimiento_oc:'Fechas MPD / seguimiento',ccp_configuracion:'Configuración CCP',ccp_excepciones:'Excepciones CCP',importaciones_oc:'Importaciones OC',importacion_oc_auditoria:'Detalle de importación',importaciones_historial_pago:'Importación pagos',locadores:'Locadores'};
+const isMpdEvent=e=>e.tabla==='seguimiento_oc'&&JSON.stringify(e.datos_anteriores?.fecha_presentacion??null)!==JSON.stringify(e.datos_nuevos?.fecha_presentacion??null);
+const auditCategory=e=>e.tabla==='seguimiento_oc'?(isMpdEvent(e)?'Registro de fechas MPD':'Seguimiento de entregables'):(categories[e.tabla]||e.tabla);
 const fmt=d=>new Intl.DateTimeFormat('es-PE',{timeZone:'America/Lima',dateStyle:'short',timeStyle:'medium'}).format(new Date(d));
 const describe=e=>{
  if(e.operacion==='INSERT')return 'Registro creado';
@@ -775,8 +778,8 @@ const describe=e=>{
 const render=()=>{
  const term=el('auditSearch').value.trim().toLowerCase();
  const op=el('auditOperation').value;
- const filtered=all.filter(e=>(!op||e.operacion===op)&&(!term||JSON.stringify(e).toLowerCase().includes(term)));
- el('auditBody').innerHTML=filtered.map(e=>'<tr><td>'+safe(fmt(e.fecha))+'</td><td>'+safe(categories[e.tabla]||e.tabla)+'</td><td>'+safe({INSERT:'CREACIÓN',UPDATE:'MODIFICACIÓN',DELETE:'ELIMINACIÓN'}[e.operacion]||e.operacion)+'</td><td title="ID interno: '+safe(e.registro_id)+'">'+safe(e.registro_descripcion||e.registro_id)+(e.locador_descripcion?'<div style="font-size:11px;color:#53647a">'+safe(e.locador_descripcion)+'</div>':'')+'</td><td title="ID usuario: '+safe(e.usuario_id||'No disponible')+'">'+safe(e.usuario_nombre||'No identificado')+'</td><td style="max-width:440px;overflow-wrap:anywhere"><details><summary>'+safe(describe(e).slice(0,140))+'</summary><div style="margin-top:8px"><strong>Antes:</strong><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+safe(JSON.stringify(e.datos_anteriores,null,2))+'</pre><strong>Después:</strong><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+safe(JSON.stringify(e.datos_nuevos,null,2))+'</pre></div></details></td></tr>').join('')||'<tr><td colspan="6">No hay eventos coincidentes.</td></tr>';
+ const filtered=all.filter(e=>(!op||e.operacion===op)&&(!term||JSON.stringify(e).toLowerCase().includes(term))&&(!kind||(kind==='mpd'?isMpdEvent(e):!isMpdEvent(e))));
+ el('auditBody').innerHTML=filtered.map(e=>'<tr><td>'+safe(fmt(e.fecha))+'</td><td>'+safe(auditCategory(e))+'</td><td>'+safe({INSERT:'CREACIÓN',UPDATE:'MODIFICACIÓN',DELETE:'ELIMINACIÓN'}[e.operacion]||e.operacion)+'</td><td title="ID interno: '+safe(e.registro_id)+'">'+safe(e.registro_descripcion||e.registro_id)+(e.locador_descripcion?'<div style="font-size:11px;color:#53647a">'+safe(e.locador_descripcion)+'</div>':'')+'</td><td title="ID usuario: '+safe(e.usuario_id||'No disponible')+'">'+safe(e.usuario_nombre||'No identificado')+'</td><td style="max-width:440px;overflow-wrap:anywhere"><details><summary>'+safe(describe(e).slice(0,140))+'</summary><div style="margin-top:8px"><strong>Antes:</strong><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+safe(JSON.stringify(e.datos_anteriores,null,2))+'</pre><strong>Después:</strong><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+safe(JSON.stringify(e.datos_nuevos,null,2))+'</pre></div></details></td></tr>').join('')||'<tr><td colspan="6">No hay eventos coincidentes.</td></tr>';
  el('auditStatus').textContent=all.length+' evento(s) cargados. Los filtros de búsqueda se aplican a los eventos cargados.';
 };
 const load=async(reset=true)=>{
@@ -791,5 +794,5 @@ const load=async(reset=true)=>{
 };
 el('auditRefresh').onclick=()=>load(true);el('auditMore').onclick=()=>load(false);
 el('auditSearch').oninput=render;el('auditOperation').onchange=render;
-el('auditTabs').addEventListener('click',e=>{const b=e.target.closest('[data-audit-table]');if(!b)return;tab=b.dataset.auditTable;el('auditTabs').querySelectorAll('button').forEach(x=>{x.style.background=x===b?'#eaf2ff':'';x.style.borderColor=x===b?'#1967d2':''});load(true)});
+el('auditTabs').addEventListener('click',e=>{const b=e.target.closest('[data-audit-table]');if(!b)return;tab=b.dataset.auditTable;kind=b.dataset.auditKind||'';el('auditTabs').querySelectorAll('button').forEach(x=>{x.style.background=x===b?'#eaf2ff':'';x.style.borderColor=x===b?'#1967d2':''});load(true)});
 </script></body></html>
