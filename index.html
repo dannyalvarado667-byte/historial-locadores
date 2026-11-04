@@ -588,7 +588,7 @@ body.login-sidebar-hidden>header,body.login-sidebar-hidden>.shell>header{margin-
 #ocFloatingHeader{position:fixed;z-index:205;overflow:hidden;pointer-events:auto;background:#e8eff8;border:1px solid #dfe5ee;box-shadow:0 3px 8px #17365d25;display:none}
 #ocFloatingHeader table{border-collapse:separate;border-spacing:0;table-layout:fixed;margin:0;width:max-content}
 #ocFloatingHeader th{position:static!important;top:auto!important;box-sizing:border-box;white-space:normal;background:#e8eff8!important;color:#1b304b!important;font-size:10px!important;font-weight:850!important;padding:11px 8px!important;line-height:1.35!important;border-bottom:1px solid #dfe5ee;cursor:pointer}
-.status-filter-count{font-size:11px;color:#536c86;font-weight:800;white-space:nowrap;margin-left:5px}</style>
+.status-filter-count{font-size:11px;color:#536c86;font-weight:800;white-space:nowrap;margin-left:5px}#tableWrap thead th[draggable=true]{cursor:grab}#tableWrap thead th[draggable=true]:active{cursor:grabbing}</style>
 </head>
 <body class="login-sidebar-hidden">
   <div class="shell">
@@ -736,10 +736,10 @@ body.login-sidebar-hidden>header,body.login-sidebar-hidden>.shell>header{margin-
                 <th data-col-key="ver_ruc" class="sortable" data-sort-key="ruc" tabindex="0">RUC</th>
                 <th data-col-key="ver_oc" class="sortable" data-sort-key="numero_oc" tabindex="0">N.° OC</th>
                 <th data-col-key="ver_fecha_emision" class="sortable" data-sort-key="fecha_emision" tabindex="0">Fecha de emisión OC</th>
-                <th data-col-key="ver_expediente" class="sortable" data-sort-key="expediente" tabindex="0">Expediente SGD</th>
-                <th data-col-key="ver_monto" class="sortable" data-sort-key="monto_total" tabindex="0">Monto total</th>
                 <th data-col-key="ver_fecha_inicio" class="sortable" data-sort-key="fecha_inicio" tabindex="0">Fecha inicio OC</th>
                 <th data-col-key="ver_fecha_termino" class="sortable" data-sort-key="fecha_termino" tabindex="0">Fecha de término OC</th>
+                <th data-col-key="ver_expediente" class="sortable" data-sort-key="expediente" tabindex="0">Expediente SGD</th>
+                <th data-col-key="ver_monto" class="sortable" data-sort-key="monto_total" tabindex="0">Monto total</th>
                 <th data-col-key="ver_plazo" class="sortable" data-sort-key="plazo" tabindex="0">Plazo de ejecución en días</th>
                 <th data-col-key="ver_area" class="sortable" data-sort-key="subgerencia" tabindex="0">Área usuaria</th>
                 <th data-col-key="ver_entregables" class="sortable" data-sort-key="numero_entregables" tabindex="0"># Entregables</th>
@@ -941,11 +941,42 @@ window.locadoresSupabaseClient=supabase;
     let currentSearchMode = 'locador';
     let selectedPeriods = new Set();
     const columnDefs = [
-      ['ver_nombre','Apellidos y nombres'],['ver_ruc','RUC'],['ver_oc','N.° OC'],['ver_fecha_emision','Fecha de emisión OC'],['ver_expediente','Expediente SGD'],
-      ['ver_monto','Monto total'],['ver_fecha_inicio','Fecha inicio OC'],['ver_fecha_termino','Fecha de término OC'],
+      ['ver_nombre','Apellidos y nombres'],['ver_ruc','RUC'],['ver_oc','N.° OC'],
+      ['ver_fecha_emision','Fecha de emisión OC'],['ver_fecha_inicio','Fecha inicio OC'],['ver_fecha_termino','Fecha de término OC'],
+      ['ver_expediente','Expediente SGD'],['ver_monto','Monto total'],
       ['ver_plazo','Plazo de ejecución en días'],['ver_area','Área usuaria'],['ver_entregables','# Entregables'],
       ['ver_status','Status'],['ver_credito','Crédito presupuestal'],['ver_tracking','Estado del entregable']
     ];
+    const defaultColumnOrder=columnDefs.map(([key])=>key);
+    let savedColumnOrder=[];
+    try{const stored=JSON.parse(localStorage.getItem('locadores:columnOrder')||'[]');if(Array.isArray(stored))savedColumnOrder=stored.filter(k=>defaultColumnOrder.includes(k))}catch(_){}
+    const orderedKeys=[...new Set([...savedColumnOrder,...defaultColumnOrder])];
+    columnDefs.sort((a,b)=>orderedKeys.indexOf(a[0])-orderedKeys.indexOf(b[0]));
+    function reorderOcHeaders(){
+      const headerRow=document.querySelector('#tableWrap thead tr');if(!headerRow)return;
+      const byKey=new Map([...headerRow.querySelectorAll('th[data-col-key]')].map(th=>[th.dataset.colKey,th]));
+      columnDefs.forEach(([key])=>{const th=byKey.get(key);if(th)headerRow.appendChild(th)});
+    }
+    function enableOcColumnDragging(){
+      const headerRow=document.querySelector('#tableWrap thead tr');if(!headerRow)return;
+      let dragging=null;
+      headerRow.querySelectorAll('th[data-col-key]').forEach(th=>{
+        th.draggable=true;th.title=(th.title?th.title+' · ':'')+'Arrastra para cambiar el orden de las columnas';
+        th.addEventListener('dragstart',e=>{dragging=th.dataset.colKey;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',dragging);th.style.opacity='.45'});
+        th.addEventListener('dragend',()=>{dragging=null;th.style.opacity='';headerRow.querySelectorAll('th').forEach(h=>h.style.outline='')});
+        th.addEventListener('dragover',e=>{if(!dragging||dragging===th.dataset.colKey)return;e.preventDefault();e.dataTransfer.dropEffect='move';th.style.outline='2px dashed #1967d2'});
+        th.addEventListener('dragleave',()=>{th.style.outline=''});
+        th.addEventListener('drop',e=>{
+          e.preventDefault();th.style.outline='';if(!dragging||dragging===th.dataset.colKey)return;
+          const from=columnDefs.findIndex(([k])=>k===dragging),to=columnDefs.findIndex(([k])=>k===th.dataset.colKey);
+          if(from<0||to<0)return;
+          const moved=columnDefs.splice(from,1)[0];columnDefs.splice(to,0,moved);
+          localStorage.setItem('locadores:columnOrder',JSON.stringify(columnDefs.map(([k])=>k)));
+          reorderOcHeaders();drawRows();ocFloatingKey='';requestAnimationFrame(syncOcFloatingHeader);
+        });
+      });
+    }
+    reorderOcHeaders();enableOcColumnDragging();
     let currentColumns = Object.fromEntries(columnDefs.map(([k])=>[k,true]));
     let localHiddenColumns = new Set();
     try{localHiddenColumns=new Set(JSON.parse(localStorage.getItem('locadores:hiddenColumns')||'[]'))}catch(_){}
