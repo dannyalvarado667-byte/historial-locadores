@@ -1077,7 +1077,8 @@ window.locadoresSupabaseClient=supabase;
         });
       });
     }
-    reorderOcHeaders();enableOcColumnDragging();installOcResizeHandles(ocTableWrap);applyOcColumnWidths();
+    // La mejora visual no debe bloquear jamás la inicialización de autenticación.
+    setTimeout(()=>{try{reorderOcHeaders();enableOcColumnDragging();installOcResizeHandles(ocTableWrap);applyOcColumnWidths()}catch(error){console.warn('Ajuste opcional de columnas no disponible:',error)}},0);
     let currentColumns = Object.fromEntries(columnDefs.map(([k])=>[k,true]));
     let localHiddenColumns = new Set();
     try{localHiddenColumns=new Set(JSON.parse(localStorage.getItem('locadores:hiddenColumns')||'[]'))}catch(_){}
