@@ -481,7 +481,7 @@ const earlyDetail=x=>{
  const days=Math.round((Date.parse(start+'T00:00:00Z')-Date.parse(date+'T00:00:00Z'))/86400000);
  if(!Number.isFinite(days)||days<=0)return '';
  const d=iso=>iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(0,4);
- const rule=earlyRuleByPeriod.get(x.periodo);const label=String(rule?.mensajes?.anticipado||'PRESENTACIÓN ANTES DEL PLAZO PERMITIDO');const day=rule?.['dia_inicio_'+Number(x.numero_entregable)]||((Number(x.numero_entregable)===1)?20:null);
+ const rule=earlyRuleByPeriod.get(x.periodo);const label=String(rule?.mensajes?.anticipado||'PRESENTACIÓN ANTES DEL PLAZO PERMITIDO');const originalStart=String(x.fecha_inicio||'').slice(0,10);const day=originalStart?Math.round((Date.parse(start+'T00:00:00Z')-Date.parse(originalStart+'T00:00:00Z'))/86400000)+1:(rule?.['dia_inicio_'+Number(x.numero_entregable)]||null);
  return '🔵 '+label+'. Presentado el '+d(date)+', '+days+(days===1?' día antes':' días antes')+' de la fecha permitida ('+d(start)+(day?' - día '+day:'')+').';
 };
 window.trayRows=(trayData||[]).map(x=>{
