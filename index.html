@@ -583,6 +583,11 @@ body.login-sidebar-hidden>header,body.login-sidebar-hidden>.shell>header{margin-
  #tableWrap table tbody td.visual-row-number {color:#354960!important;}
  #filterPanel .filter-field label {font-weight:850!important;}
 }
+
+/* Cabecera flotante de OC: visible incluso cuando la barra de filtros tapa el encabezado original. */
+#ocFloatingHeader{position:fixed;z-index:205;overflow:hidden;pointer-events:auto;background:#e8eff8;border:1px solid #dfe5ee;box-shadow:0 3px 8px #17365d25;display:none}
+#ocFloatingHeader table{border-collapse:separate;border-spacing:0;table-layout:fixed;margin:0;width:max-content}
+#ocFloatingHeader th{position:static!important;top:auto!important;box-sizing:border-box;white-space:normal;background:#e8eff8!important;color:#1b304b!important;font-size:10px!important;font-weight:850!important;padding:11px 8px!important;line-height:1.35!important;border-bottom:1px solid #dfe5ee;cursor:pointer}
 </style>
 </head>
 <body class="login-sidebar-hidden">
@@ -878,6 +883,35 @@ window.locadoresSupabaseClient=supabase;
       window.addEventListener('resize',syncStickyToolsHeight);
       syncStickyToolsHeight();
     }
+    // Cabecera flotante: se activa cuando el encabezado original queda oculto por los filtros.
+    const ocTableWrap=document.getElementById('tableWrap');
+    const ocFloating=document.createElement('div');ocFloating.id='ocFloatingHeader';ocFloating.setAttribute('aria-hidden','true');document.body.appendChild(ocFloating);
+    let ocFloatingKey='';
+    function syncOcFloatingHeader(){
+      if(!ocTableWrap||ocTableWrap.hidden||!ocTableWrap.offsetWidth){ocFloating.style.display='none';return}
+      const head=ocTableWrap.querySelector('thead'),table=ocTableWrap.querySelector('table');if(!head||!table){ocFloating.style.display='none';return}
+      const wrapRect=ocTableWrap.getBoundingClientRect(),headRect=head.getBoundingClientRect();
+      const filters=document.getElementById('filterPanel');const filtersRect=filters&&!filters.hidden?filters.getBoundingClientRect():null;
+      const topLimit=Math.max(0,filtersRect&&filtersRect.bottom>0&&filtersRect.top<innerHeight?filtersRect.bottom:0);
+      const h=headRect.height||42;
+      const show=headRect.top<topLimit&&wrapRect.bottom>topLimit+h&&wrapRect.top<topLimit;
+      if(!show){ocFloating.style.display='none';return}
+      const originals=[...head.querySelectorAll('th')].filter(th=>getComputedStyle(th).display!=='none');
+      const widths=originals.map(th=>Math.ceil(th.getBoundingClientRect().width));
+      const key=originals.map((th,i)=>th.textContent.trim()+':'+widths[i]).join('|');
+      if(key!==ocFloatingKey){
+        ocFloating.innerHTML='<table><thead><tr>'+originals.map((th,i)=>'<th style="width:'+widths[i]+'px;min-width:'+widths[i]+'px;max-width:'+widths[i]+'px">'+th.innerHTML+'</th>').join('')+'</tr></thead></table>';
+        ocFloatingKey=key;
+        [...ocFloating.querySelectorAll('th')].forEach((clone,i)=>{clone.onclick=()=>originals[i].click()});
+      }
+      ocFloating.style.left=wrapRect.left+'px';ocFloating.style.width=wrapRect.width+'px';ocFloating.style.top=topLimit+'px';ocFloating.style.height=h+'px';
+      const cloned=ocFloating.querySelector('table');if(cloned){cloned.style.transform='translateX(-'+ocTableWrap.scrollLeft+'px)'}
+      ocFloating.style.display='block';
+    }
+    window.addEventListener('scroll',syncOcFloatingHeader,{passive:true});window.addEventListener('resize',syncOcFloatingHeader);
+    ocTableWrap?.addEventListener('scroll',syncOcFloatingHeader,{passive:true});
+    new MutationObserver(()=>requestAnimationFrame(syncOcFloatingHeader)).observe(ocTableWrap,{attributes:true,attributeFilter:['hidden','style'],childList:true,subtree:true});
+    requestAnimationFrame(syncOcFloatingHeader);
     const stickyFilterPanel=document.getElementById('filterPanel');
     function syncStickyFilterHeight(){
       const h=stickyFilterPanel && !stickyFilterPanel.hidden ? stickyFilterPanel.getBoundingClientRect().height : 0;
