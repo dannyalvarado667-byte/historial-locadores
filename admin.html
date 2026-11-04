@@ -795,4 +795,5 @@ const load=async(reset=true)=>{
 el('auditRefresh').onclick=()=>load(true);el('auditMore').onclick=()=>load(false);
 el('auditSearch').oninput=render;el('auditOperation').onchange=render;
 el('auditTabs').addEventListener('click',e=>{const b=e.target.closest('[data-audit-table]');if(!b)return;tab=b.dataset.auditTable;kind=b.dataset.auditKind||'';el('auditTabs').querySelectorAll('button').forEach(x=>{x.style.background=x===b?'#eaf2ff':'';x.style.borderColor=x===b?'#1967d2':''});load(true)});
-</script></body></html>
+</script><script src="report-column-order.js?v=8215033" defer></script>
+</body></html>
