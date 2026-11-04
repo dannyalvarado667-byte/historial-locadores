@@ -174,6 +174,14 @@ body.expanded-preview-open{overflow:hidden}
 .sap-preview-table th:nth-child(n+7),.sap-preview-table td:nth-child(n+7){min-width:115px;max-width:260px}
 .sap-preview-table td:nth-child(13){min-width:115px}
 .sap-preview-table .decision-column .diff-comparison{min-width:0;max-width:100%;overflow-wrap:anywhere}
+
+/* Ajuste manual de columnas arrastrando el borde derecho de cada encabezado */
+.sap-preview-table.resizable-columns{table-layout:fixed;width:max-content;min-width:0}
+.sap-preview-table.resizable-columns th,.sap-preview-table.resizable-columns td{box-sizing:border-box;min-width:0!important;max-width:none!important;width:auto!important;overflow-wrap:anywhere;white-space:normal}
+.sap-preview-table.resizable-columns th{position:sticky;top:0;padding-right:16px;user-select:none}
+.sap-preview-table .column-resize-handle{position:absolute;right:0;top:0;bottom:0;width:10px;cursor:col-resize;touch-action:none;z-index:4;border-right:2px solid transparent}
+.sap-preview-table .column-resize-handle:hover,.sap-preview-table .column-resize-handle:focus-visible{border-right-color:#1967d2;background:#1967d218;outline:none}
+body.resizing-import-column,body.resizing-import-column *{cursor:col-resize!important;user-select:none!important}
 </style>
 </head>
 <body>
@@ -284,6 +292,23 @@ async function invoke(action){const {data:{session}}=await supabase.auth.getSess
 $('#analyze').onclick=async()=>{try{if(!$('#ccp').value.trim()){warnMissingCcp();return;}$('#analyze').disabled=true;$('#analyze').textContent='Analizando…';parsedRows=parseSheet();analysis=await invoke('analyze');initializeDecisions();render();$('#results').hidden=false;$('#results').scrollIntoView({behavior:'smooth',block:'start'});$('#msg').textContent='Análisis completado. Ningún dato ha sido guardado.';$('#msg').className='message success'}catch(e){showErr(e)}finally{$('#analyze').disabled=false;$('#analyze').textContent='Analizar archivo'}};
 function updateFilterCounts(){if(!analysis?.results)return;const counts={all:analysis.results.length,nueva_oc:0,diferencia:0,error:0,sin_cambios:0};for(const row of analysis.results){if(Object.prototype.hasOwnProperty.call(counts,row.status))counts[row.status]++}document.querySelectorAll('#filters [data-f],#expandedFilters [data-f]').forEach(btn=>{const label={all:'Todos',nueva_oc:'Nuevos',diferencia:'Diferencias',error:'Errores',sin_cambios:'Sin cambios'}[btn.dataset.f];if(label)btn.textContent=label+' ('+(counts[btn.dataset.f]||0)+')'})}
 function render(){updateFilterCounts();const s=analysis.summary;$('#mTotal').textContent=s.total;$('#mLoc').textContent=s.nuevos_locadores;$('#mOc').textContent=s.nuevas_oc;$('#mDiff').textContent=s.diferencias;$('#mErr').textContent=s.errores;const blocked=s.errores>0;$('#confirm').disabled=blocked;$('#confirm').textContent=s.diferencias>0?'Confirmar saneamiento':'Confirmar importación';$('#confirmHint').textContent=s.errores>0?'Hay errores que deben corregirse antes de continuar.':s.diferencias>0?'Modo saneamiento: se corregirán únicamente los campos provenientes del Excel oficial. Los datos de gestión se conservarán.':'Validación limpia. Puedes confirmar la importación.';renderItems()}
+const columnDefaults=[55,115,150,130,135,250,155,155,150,135,125,135,145,145,150,160,160,160,160];
+const columnStorageKey='locadores_import_column_widths_v1';
+function savedColumnWidths(){try{const x=JSON.parse(localStorage.getItem(columnStorageKey)||'null');return Array.isArray(x)?columnDefaults.map((d,i)=>Number.isFinite(+x[i])?Math.max(55,Math.min(900,+x[i])):d):[...columnDefaults]}catch{return [...columnDefaults]}}
+let columnWidths=savedColumnWidths();
+function installColumnResizing(){document.querySelectorAll('.sap-preview-table').forEach(table=>{
+ const heads=[...table.querySelectorAll('thead th')];if(!heads.length)return;
+ table.classList.add('resizable-columns');
+ let group=table.querySelector('colgroup');if(!group){group=document.createElement('colgroup');table.prepend(group)}
+ group.innerHTML=heads.map((_,i)=>'<col style="width:'+columnWidths[i]+'px">').join('');
+ const cols=[...group.children];const apply=()=>{const total=columnWidths.slice(0,heads.length).reduce((a,b)=>a+b,0);table.style.width=total+'px';cols.forEach((col,i)=>col.style.width=columnWidths[i]+'px')};apply();
+ heads.forEach((head,i)=>{const handle=document.createElement('span');handle.className='column-resize-handle';handle.tabIndex=0;handle.setAttribute('role','separator');handle.setAttribute('aria-label','Ajustar ancho de columna '+head.textContent.trim());handle.title='Arrastra para ajustar el ancho. Doble clic para restaurar.';head.append(handle);
+ const setWidth=n=>{columnWidths[i]=Math.max(55,Math.min(900,Math.round(n)));apply();document.querySelectorAll('.sap-preview-table.resizable-columns').forEach(other=>{if(other===table)return;const c=other.querySelectorAll('colgroup col');if(c[i]){c[i].style.width=columnWidths[i]+'px';other.style.width=columnWidths.slice(0,c.length).reduce((a,b)=>a+b,0)+'px'}})};
+ handle.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();const x=e.clientX,w=columnWidths[i];document.body.classList.add('resizing-import-column');handle.setPointerCapture(e.pointerId);const move=ev=>setWidth(w+ev.clientX-x);const stop=()=>{handle.removeEventListener('pointermove',move);document.body.classList.remove('resizing-import-column');localStorage.setItem(columnStorageKey,JSON.stringify(columnWidths))};handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',stop,{once:true});handle.addEventListener('pointercancel',stop,{once:true})});
+ handle.addEventListener('dblclick',e=>{e.stopPropagation();setWidth(columnDefaults[i]);localStorage.setItem(columnStorageKey,JSON.stringify(columnWidths))});
+ handle.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();setWidth(columnWidths[i]+(e.key==='ArrowRight'?15:-15));localStorage.setItem(columnStorageKey,JSON.stringify(columnWidths))}})
+ })
+ })}
 function renderItems(){
  const rows=analysis.results.filter(r=>filter==='all'||r.status===filter);
  const labels={nueva_oc:['Nueva OC','b-new'],diferencia:['Diferencia','b-diff'],error:['Error','b-error'],sin_cambios:['Sin cambios','b-same']};
@@ -302,7 +327,7 @@ function renderItems(){
  $('#items').innerHTML=html('main');
  $('#expandedPreviewItems').innerHTML=html('expanded');
  $('#expandedPreviewCount').textContent=rows.length+' de '+analysis.results.length+' registros · '+($('#ccp').value||'CCP no seleccionada');
- document.querySelectorAll('#filters [data-f],#expandedFilters [data-f]').forEach(x=>x.classList.toggle('active',x.dataset.f===filter));
+ document.querySelectorAll('#filters [data-f],#expandedFilters [data-f]').forEach(x=>x.classList.toggle('active',x.dataset.f===filter));installColumnResizing();
 }
 function setPreviewFilter(e){const b=e.target.closest('[data-f]');if(!b)return;filter=b.dataset.f;renderItems()}
 $('#filters').onclick=setPreviewFilter;$('#expandedFilters').onclick=setPreviewFilter;
