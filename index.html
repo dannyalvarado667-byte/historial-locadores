@@ -588,16 +588,7 @@ body.login-sidebar-hidden>header,body.login-sidebar-hidden>.shell>header{margin-
 #ocFloatingHeader{position:fixed;z-index:205;overflow:hidden;pointer-events:auto;background:#e8eff8;border:1px solid #dfe5ee;box-shadow:0 3px 8px #17365d25;display:none}
 #ocFloatingHeader table{border-collapse:separate;border-spacing:0;table-layout:fixed;margin:0;width:max-content}
 #ocFloatingHeader th[draggable=true]{cursor:grab}#ocFloatingHeader th[draggable=true]:active{cursor:grabbing}#ocFloatingHeader th{position:static!important;top:auto!important;box-sizing:border-box;white-space:normal;background:#e8eff8!important;color:#1b304b!important;font-size:10px!important;font-weight:850!important;padding:11px 8px!important;line-height:1.35!important;border-bottom:1px solid #dfe5ee;cursor:pointer}
-.status-filter-count{font-size:11px;color:#536c86;font-weight:800;white-space:nowrap;margin-left:5px}#tableWrap thead th[draggable=true]{cursor:grab}#tableWrap thead th[draggable=true]:active{cursor:grabbing}
-/* Ajuste de ancho mediante tiradores visibles en encabezados originales y flotantes. */
-#tableWrap table.oc-resizable-table{table-layout:fixed!important;max-width:none!important}
-#tableWrap table.oc-resizable-table thead th{position:relative!important;box-sizing:border-box!important}
-#tableWrap table.oc-resizable-table td{box-sizing:border-box!important;overflow-wrap:anywhere}
-#tableWrap .oc-resize-handle,#ocFloatingHeader .oc-resize-handle{position:absolute;right:-4px;top:0;bottom:0;width:11px;z-index:8;cursor:col-resize;touch-action:none;user-select:none}
-#tableWrap .oc-resize-handle:after,#ocFloatingHeader .oc-resize-handle:after{content:'';position:absolute;top:18%;bottom:18%;left:5px;border-right:2px solid #b1c3d8}
-#tableWrap .oc-resize-handle:hover:after,#ocFloatingHeader .oc-resize-handle:hover:after{border-color:#1967d2;border-right-width:3px}
-#ocFloatingHeader th{position:relative!important}
-</style>
+.status-filter-count{font-size:11px;color:#536c86;font-weight:800;white-space:nowrap;margin-left:5px}#tableWrap thead th[draggable=true]{cursor:grab}#tableWrap thead th[draggable=true]:active{cursor:grabbing}</style>
 </head>
 <body class="login-sidebar-hidden">
   <div class="shell">
@@ -908,8 +899,8 @@ window.locadoresSupabaseClient=supabase;
       const originals=[...head.querySelectorAll('th')].filter(th=>getComputedStyle(th).display!=='none');
       const widths=originals.map(th=>Math.ceil(th.getBoundingClientRect().width));
       const key=originals.map((th,i)=>th.textContent.trim()+':'+widths[i]).join('|');
-      if(key!==ocFloatingKey&&!ocResizing){
-        ocFloating.innerHTML='<table><thead><tr>'+originals.map((th,i)=>'<th style="width:'+widths[i]+'px;min-width:'+widths[i]+'px;max-width:'+widths[i]+'px">'+th.innerHTML.replace(/<span class="oc-resize-handle"[^>]*><\\/span>/g,'')+'</th>').join('')+'</tr></thead></table>';
+      if(key!==ocFloatingKey){
+        ocFloating.innerHTML='<table><thead><tr>'+originals.map((th,i)=>'<th style="width:'+widths[i]+'px;min-width:'+widths[i]+'px;max-width:'+widths[i]+'px">'+th.innerHTML+'</th>').join('')+'</tr></thead></table>';
         ocFloatingKey=key;
         [...ocFloating.querySelectorAll('th')].forEach((clone,i)=>{
           const key=originals[i].dataset.colKey;
@@ -918,7 +909,7 @@ window.locadoresSupabaseClient=supabase;
           clone.title='Arrastra para mover esta columna';
           clone.onclick=()=>originals[i].click();
           clone.addEventListener('dragstart',e=>{
-            if(!key||ocResizing||e.target.closest('.oc-resize-handle')){e.preventDefault();return}e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','oc-column:'+key);
+            if(!key)return;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','oc-column:'+key);
             ocFloating.dataset.draggingColumn=key;clone.style.opacity='.5';
           });
           clone.addEventListener('dragover',e=>{
@@ -940,7 +931,6 @@ window.locadoresSupabaseClient=supabase;
       ocFloating.style.left=wrapRect.left+'px';ocFloating.style.width=wrapRect.width+'px';ocFloating.style.top=topLimit+'px';ocFloating.style.height=h+'px';
       const cloned=ocFloating.querySelector('table');if(cloned){cloned.style.transform='translateX(-'+ocTableWrap.scrollLeft+'px)'}
       ocFloating.style.display='block';
-      installOcResizeHandles(ocFloating);
     }
     window.addEventListener('scroll',syncOcFloatingHeader,{passive:true});window.addEventListener('resize',syncOcFloatingHeader);
     ocTableWrap?.addEventListener('scroll',syncOcFloatingHeader,{passive:true});
@@ -999,75 +989,12 @@ window.locadoresSupabaseClient=supabase;
       localStorage.setItem('locadores:columnOrder',JSON.stringify(columnDefs.map(([k])=>k)));
       reorderOcHeaders();drawRows();ocFloatingKey='';requestAnimationFrame(syncOcFloatingHeader);
     }
-    // Anchos ajustables por columna, persistentes y sincronizados con la cabecera flotante.
-    const ocColumnWidths=(()=>{try{return JSON.parse(localStorage.getItem('locadores:columnWidths')||'{}')||{}}catch(_){return {}}})();
-    let ocResizing=false;
-    function applyOcColumnWidths(){
-      const table=ocTableWrap?.querySelector('table'),head=table?.tHead?.rows[0];if(!head)return;
-      const headers=[...head.cells].filter(th=>getComputedStyle(th).display!=='none');
-      if(!headers.length)return;
-      let colgroup=table.querySelector(':scope > colgroup[data-oc-widths]');
-      if(!colgroup){colgroup=document.createElement('colgroup');colgroup.dataset.ocWidths='';table.prepend(colgroup)}
-      const widths=headers.map(th=>{
-        const key=th.dataset.colKey||'numero_fila';
-        return Math.max(key==='ver_nombre'?200:75,Math.round(Number(ocColumnWidths[key])||th.getBoundingClientRect().width||110));
-      });
-      colgroup.innerHTML=widths.map(w=>'<col style="width:'+w+'px;min-width:'+w+'px">').join('');
-      table.classList.add('oc-resizable-table');
-      table.style.setProperty('width',widths.reduce((a,b)=>a+b,0)+'px','important');
-      table.style.setProperty('min-width',widths.reduce((a,b)=>a+b,0)+'px','important');
-      ocFloatingKey='';
-    }
-    function installOcResizeHandles(container){
-      container.querySelectorAll('th[data-col-key]').forEach(th=>{
-        if(th.querySelector('.oc-resize-handle'))return;
-        const handle=document.createElement('span');handle.className='oc-resize-handle';
-        handle.title='Arrastra este borde para ajustar el ancho';
-        handle.setAttribute('aria-label','Ajustar ancho de '+th.textContent.trim());
-        handle.addEventListener('click',e=>{e.preventDefault();e.stopPropagation()});
-        handle.addEventListener('dragstart',e=>e.preventDefault());
-        handle.addEventListener('pointerdown',e=>{
-          if(e.button!==0)return;
-          e.preventDefault();e.stopPropagation();
-          ocResizing=true;
-          const key=th.dataset.colKey;
-          const original=ocTableWrap.querySelector('thead th[data-col-key="'+key+'"]');
-          const startWidth=original?.getBoundingClientRect().width||th.getBoundingClientRect().width;
-          const startX=e.clientX;
-          // Impide el arrastre HTML5 del encabezado durante el ajuste de ancho.
-          const dragged=[th,original].filter(Boolean);
-          dragged.forEach(h=>h.draggable=false);
-          document.body.style.cursor='col-resize';
-          document.body.style.userSelect='none';
-          const move=ev=>{
-            const min=key==='ver_nombre'?200:75;
-            ocColumnWidths[key]=Math.max(min,Math.round(startWidth+ev.clientX-startX));
-            applyOcColumnWidths();
-            const clone=ocFloating.querySelector('th[data-col-key="'+key+'"]');
-            if(clone){const w=ocColumnWidths[key];clone.style.width=w+'px';clone.style.minWidth=w+'px';clone.style.maxWidth=w+'px'}
-          };
-          const stop=()=>{
-            window.removeEventListener('pointermove',move,true);
-            window.removeEventListener('pointerup',stop,true);
-            window.removeEventListener('pointercancel',stop,true);
-            dragged.forEach(h=>h.draggable=true);
-            document.body.style.cursor='';document.body.style.userSelect='';
-            localStorage.setItem('locadores:columnWidths',JSON.stringify(ocColumnWidths));
-            ocResizing=false;ocFloatingKey='';requestAnimationFrame(syncOcFloatingHeader);
-          };
-          window.addEventListener('pointermove',move,true);
-          window.addEventListener('pointerup',stop,true);
-          window.addEventListener('pointercancel',stop,true);
-        });
-        th.appendChild(handle);
-      });
-    }
     function enableOcColumnDragging(){
       const headerRow=document.querySelector('#tableWrap thead tr');if(!headerRow)return;
       let dragging=null;
       headerRow.querySelectorAll('th[data-col-key]').forEach(th=>{
         th.draggable=true;th.title=(th.title?th.title+' · ':'')+'Arrastra para cambiar el orden de las columnas';
-        th.addEventListener('dragstart',e=>{if(ocResizing||e.target.closest('.oc-resize-handle')){e.preventDefault();return}dragging=th.dataset.colKey;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',dragging);th.style.opacity='.45'});
+        th.addEventListener('dragstart',e=>{dragging=th.dataset.colKey;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',dragging);th.style.opacity='.45'});
         th.addEventListener('dragend',()=>{dragging=null;th.style.opacity='';headerRow.querySelectorAll('th').forEach(h=>h.style.outline='')});
         th.addEventListener('dragover',e=>{if(!dragging||dragging===th.dataset.colKey)return;e.preventDefault();e.dataTransfer.dropEffect='move';th.style.outline='2px dashed #1967d2'});
         th.addEventListener('dragleave',()=>{th.style.outline=''});
@@ -1077,8 +1004,7 @@ window.locadoresSupabaseClient=supabase;
         });
       });
     }
-    // La mejora visual no debe bloquear jamás la inicialización de autenticación.
-    setTimeout(()=>{try{reorderOcHeaders();enableOcColumnDragging();installOcResizeHandles(ocTableWrap);applyOcColumnWidths()}catch(error){console.warn('Ajuste opcional de columnas no disponible:',error)}},0);
+    reorderOcHeaders();enableOcColumnDragging();
     let currentColumns = Object.fromEntries(columnDefs.map(([k])=>[k,true]));
     let localHiddenColumns = new Set();
     try{localHiddenColumns=new Set(JSON.parse(localStorage.getItem('locadores:hiddenColumns')||'[]'))}catch(_){}
@@ -1675,7 +1601,6 @@ window.locadoresSupabaseClient=supabase;
       } else {
         resultsBody.innerHTML = visibleRows.map(rowHtml).join('');
       }
-      applyOcColumnWidths();
     }
 
     document.querySelectorAll('#tableWrap thead th[data-sort-key]').forEach(th=>{
