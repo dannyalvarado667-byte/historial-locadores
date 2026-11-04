@@ -552,9 +552,9 @@ try{
  if(refreshError)throw refreshError;
  rows=fresh||[];fill();$('#q').value='';$('#ccp').value='';$('#area').value='';$('#estado').value='';render();
  $('#regMsg').textContent='Escribe nombre, RUC u OC para identificar al locador.';
- await styledMessage('Movimiento registrado correctamente.'+(submittedDate?' Fecha MPD conservada: '+fmt(submittedDate)+'.':'')+' El formulario se limpió y el Registro Diario de Expedientes de Pago se actualizó.');
+ await styledMessage('Movimiento registrado correctamente.'+(submittedDate?' Fecha MPD conservada: '+fmt(submittedDate)+'.':'')+' El formulario se limpió y el Registro Diario de Expedientes de Pago se actualizó.');location.reload();
 }catch(refreshError){
- $('#regMsg').textContent='Escribe nombre, RUC u OC para identificar al locador.';await styledMessage('Movimiento guardado correctamente. No se pudo actualizar el Registro Diario automáticamente; recarga la página para consultar el movimiento.');
+ $('#regMsg').textContent='Escribe nombre, RUC u OC para identificar al locador.';await styledMessage('Movimiento guardado correctamente. No se pudo actualizar el Registro Diario automáticamente; recarga la página para consultar el movimiento.');location.reload();
 }}catch(e){$('#regMsg').textContent='No se pudo registrar: '+e.message}finally{$('#regSave').disabled=false}};
 function fill(){const monthRank={'enero':1,'febrero':2,'marzo':3,'abril':4,'mayo':5,'junio':6,'julio':7,'agosto':8,'setiembre':9,'septiembre':9,'octubre':10,'noviembre':11,'diciembre':12};const periodKey=v=>{const s=String(v).toLowerCase(),y=Number((s.match(/20\d{2}/)||['0'])[0]),ms=Object.entries(monthRank).filter(([m])=>s.includes(m)).map(([,n])=>n);return y*100+(ms.length?Math.max(...ms):0)};for(const [id,key] of [['#ccp','periodo'],['#area','subgerencia_snapshot'],['#estado','estado_tramite']]){const el=$(id);let a=[...new Set(rows.map(x=>x[key]||(key==='subgerencia_snapshot'?x.subgerencia:null)).filter(Boolean))];if(id==='#ccp')a.sort((x,y)=>periodKey(x)-periodKey(y)||String(x).localeCompare(String(y)));else a.sort();el.innerHTML='<option value="">'+(id==='#estado'?'Todos':'Todas')+'</option>'+a.map(x=>'<option>'+esc(x)+'</option>').join('');if(id==='#ccp'&&a.length)el.value=a[a.length-1]}}
 function presented(v){return v===true?'<span class="yes">Sí</span>':v===false?'<span class="no">No</span>':'—'}
