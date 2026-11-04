@@ -588,7 +588,19 @@ body.login-sidebar-hidden>header,body.login-sidebar-hidden>.shell>header{margin-
 #ocFloatingHeader{position:fixed;z-index:205;overflow:hidden;pointer-events:auto;background:#e8eff8;border:1px solid #dfe5ee;box-shadow:0 3px 8px #17365d25;display:none}
 #ocFloatingHeader table{border-collapse:separate;border-spacing:0;table-layout:fixed;margin:0;width:max-content}
 #ocFloatingHeader th[draggable=true]{cursor:grab}#ocFloatingHeader th[draggable=true]:active{cursor:grabbing}#ocFloatingHeader th{position:static!important;top:auto!important;box-sizing:border-box;white-space:normal;background:#e8eff8!important;color:#1b304b!important;font-size:10px!important;font-weight:850!important;padding:11px 8px!important;line-height:1.35!important;border-bottom:1px solid #dfe5ee;cursor:pointer}
-.status-filter-count{font-size:11px;color:#536c86;font-weight:800;white-space:nowrap;margin-left:5px}#tableWrap thead th[draggable=true]{cursor:grab}#tableWrap thead th[draggable=true]:active{cursor:grabbing}</style>
+.status-filter-count{font-size:11px;color:#536c86;font-weight:800;white-space:nowrap;margin-left:5px}#tableWrap thead th[draggable=true]{cursor:grab}#tableWrap thead th[draggable=true]:active{cursor:grabbing}
+/* Vista ampliada del historial de OC */
+.filter-footer{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+#expandOcView{border-color:#b8d0e9;color:#17559c;background:#f7fbff}
+.oc-expanded-toolbar[hidden]{display:none!important}
+.oc-expanded-toolbar{position:sticky;left:0;top:0;z-index:25;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 17px;background:#173d6d;color:#fff;min-width:max-content}
+.oc-expanded-toolbar strong{font-size:14px}
+.oc-expanded-toolbar .btn{background:#fff;color:#17365d}
+body.oc-expanded-active{overflow:hidden!important}
+#tableWrap.oc-expanded{position:fixed!important;inset:2vh 2vw!important;width:96vw!important;height:96vh!important;max-width:none!important;max-height:none!important;overflow:auto!important;z-index:3000!important;background:#fff!important;border:1px solid #cbd9e8;border-radius:14px;box-shadow:0 0 0 100vmax #102b4c9c,0 22px 65px #102b4c55}
+#tableWrap.oc-expanded thead th{position:sticky!important;top:49px!important;z-index:20;background:#e8f0f9!important}
+#tableWrap.oc-expanded table{max-width:none!important}
+</style>
 </head>
 <body class="login-sidebar-hidden">
   <div class="shell">
@@ -724,10 +736,10 @@ body.login-sidebar-hidden>header,body.login-sidebar-hidden>.shell>header{margin-
             <div class="filter-field" data-filter-col="ver_entregables"><label for="filterDeliverablesBtn">Entregables</label><div class="filter-multi" id="filterDeliverablesWrap"><button type="button" id="filterDeliverablesBtn" class="filter-multi-btn" aria-expanded="false">Todos <span>▾</span></button><div class="filter-multi-menu" id="filterDeliverablesMenu" hidden><div class="filter-multi-head"><strong>Entregables</strong><button type="button" class="filter-multi-close" aria-label="Cerrar">×</button></div><div class="filter-multi-options"></div><div class="filter-multi-actions"><button type="button" data-action="all">Seleccionar todos</button><button type="button" data-action="clear">Limpiar</button></div></div></div></div>
             <div class="filter-field filter-oc-field" data-filter-col="ver_oc"><label for="filterOc">N.° OC</label><input id="filterOc" type="text" inputmode="numeric" placeholder="Filtrar OC"></div>
           </div>
-          <div class="filter-footer"><button id="clearFilters" class="btn btn-tool" type="button">Limpiar filtros</button></div>
+          <div class="filter-footer"><button id="expandOcView" class="btn btn-tool" type="button" aria-expanded="false">⛶ Ampliar vista</button><button id="clearFilters" class="btn btn-tool" type="button">Limpiar filtros</button></div>
         </div>
         <div id="emptyState" class="empty">Realiza una búsqueda para visualizar el historial.</div>
-        <div id="tableWrap" class="table-wrap" hidden>
+        <div id="tableWrap" class="table-wrap" hidden><div class="oc-expanded-toolbar" id="ocExpandedToolbar" hidden><strong>Historial de órdenes de compra · Vista ampliada</strong><button id="closeOcExpanded" class="btn btn-tool" type="button">✕ Cerrar</button></div>
           <table>
             <thead>
               <tr>
@@ -887,6 +899,22 @@ window.locadoresSupabaseClient=supabase;
     const ocTableWrap=document.getElementById('tableWrap');
     const ocFloating=document.createElement('div');ocFloating.id='ocFloatingHeader';ocFloating.setAttribute('aria-hidden','true');document.body.appendChild(ocFloating);
     let ocFloatingKey='';
+    // Vista ampliada del mismo reporte, sin duplicar ni alterar filas o filtros.
+    function setOcExpanded(expanded){
+      const wrap=document.getElementById('tableWrap');
+      if(!wrap||wrap.hidden)return;
+      wrap.classList.toggle('oc-expanded',expanded);
+      document.body.classList.toggle('oc-expanded-active',expanded);
+      document.getElementById('ocExpandedToolbar').hidden=!expanded;
+      const btn=document.getElementById('expandOcView');
+      btn.setAttribute('aria-expanded',String(expanded));
+      btn.textContent=expanded?'⤢ Reducir vista':'⛶ Ampliar vista';
+      ocFloating.style.display='none';
+      requestAnimationFrame(syncOcFloatingHeader);
+    }
+    document.getElementById('expandOcView').addEventListener('click',()=>setOcExpanded(!ocTableWrap.classList.contains('oc-expanded')));
+    document.getElementById('closeOcExpanded').addEventListener('click',()=>setOcExpanded(false));
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&ocTableWrap.classList.contains('oc-expanded'))setOcExpanded(false)});
     function syncOcFloatingHeader(){
       if(!ocTableWrap||ocTableWrap.hidden||!ocTableWrap.offsetWidth){ocFloating.style.display='none';return}
       const head=ocTableWrap.querySelector('thead'),table=ocTableWrap.querySelector('table');if(!head||!table){ocFloating.style.display='none';return}
@@ -894,7 +922,7 @@ window.locadoresSupabaseClient=supabase;
       const filters=document.getElementById('filterPanel');const filtersRect=filters&&!filters.hidden?filters.getBoundingClientRect():null;
       const topLimit=Math.max(0,filtersRect&&filtersRect.bottom>0&&filtersRect.top<innerHeight?filtersRect.bottom:0);
       const h=headRect.height||42;
-      const show=headRect.top<topLimit&&wrapRect.bottom>topLimit+h&&wrapRect.top<topLimit;
+      const show=!ocTableWrap.classList.contains('oc-expanded')&&headRect.top<topLimit&&wrapRect.bottom>topLimit+h&&wrapRect.top<topLimit;
       if(!show){ocFloating.style.display='none';return}
       const originals=[...head.querySelectorAll('th')].filter(th=>getComputedStyle(th).display!=='none');
       const widths=originals.map(th=>Math.ceil(th.getBoundingClientRect().width));
