@@ -1410,6 +1410,7 @@ window.locadoresSupabaseClient=supabase;
     const exportData = () => visibleRows.map(row => {
       const values = {
         ver_nombre: row.apellidos_nombres ?? '', ver_ruc: row.ruc ?? '', ver_oc: row.numero_oc ?? '',
+        ver_fecha_emision: formatDate(row.fecha_emision),
         ver_expediente: row.expediente ?? '', ver_monto: Number(row.monto_total ?? 0),
         ver_fecha_inicio: formatDate(row.fecha_inicio), ver_fecha_termino: formatDate(row.fecha_termino),
         ver_plazo: executionDaysNumber(row.fecha_inicio,row.fecha_termino), ver_area: row.subgerencia ?? '',
@@ -1501,7 +1502,7 @@ window.locadoresSupabaseClient=supabase;
         });
       } else data.forEach(addDataRow);
 
-      const widths={'Apellidos y nombres':38,'RUC':15,'N.° OC':16,'Expediente SGD':23,'Monto total':16,'Fecha inicio OC':17,'Fecha de término OC':19,'Plazo de ejecución en días':20,'Área usuaria':17,'# Entregables':14,'Status':19,'Crédito presupuestal':21};
+      const widths={'Apellidos y nombres':38,'RUC':15,'N.° OC':16,'Expediente SGD':23,'Monto total':16,'Fecha de emisión OC':19,'Fecha inicio OC':17,'Fecha de término OC':19,'Plazo de ejecución en días':20,'Área usuaria':17,'# Entregables':14,'Status':19,'Crédito presupuestal':21};
       headers.forEach((h,i)=>ws.getColumn(i+1).width=widths[h]||17);
       if(!grouped) ws.autoFilter={from:{row:4,column:1},to:{row:4,column:lastCol}};
 
