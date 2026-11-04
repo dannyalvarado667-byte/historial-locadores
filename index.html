@@ -594,7 +594,7 @@ body.login-sidebar-hidden>header,body.login-sidebar-hidden>.shell>header{margin-
 #expandOcView{border-color:#b8d0e9;color:#17559c;background:#f7fbff}
 .oc-expanded-toolbar[hidden]{display:none!important}
 .oc-expanded-toolbar{position:sticky;left:0;top:0;z-index:25;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 17px;background:#173d6d;color:#fff;min-width:max-content}
-.oc-expanded-toolbar strong{font-size:14px}
+.oc-expanded-toolbar strong{font-size:14px}.oc-expanded-toolbar .oc-expanded-count{margin-right:auto;font-size:12px;font-weight:800;color:#fff;background:#ffffff22;border:1px solid #ffffff55;border-radius:999px;padding:5px 11px;white-space:nowrap}
 .oc-expanded-toolbar .btn{background:#fff;color:#17365d}
 body.oc-expanded-active{overflow:hidden!important}
 #tableWrap.oc-expanded{position:fixed!important;inset:2vh 2vw!important;width:96vw!important;height:96vh!important;max-width:none!important;max-height:none!important;overflow:auto!important;z-index:3000!important;background:#fff!important;border:1px solid #cbd9e8;border-radius:14px;box-shadow:0 0 0 100vmax #102b4c9c,0 22px 65px #102b4c55}
@@ -757,7 +757,7 @@ body.oc-expanded-active{overflow:hidden!important}
           <div class="filter-footer"><button id="expandOcView" class="btn btn-tool" type="button" aria-expanded="false">⛶ Ampliar vista</button><button id="clearFilters" class="btn btn-tool" type="button">Limpiar filtros</button></div>
         </div>
         <div id="emptyState" class="empty">Realiza una búsqueda para visualizar el historial.</div>
-        <div id="tableWrap" class="table-wrap" hidden><div class="oc-expanded-toolbar" id="ocExpandedToolbar" hidden><strong>Historial de órdenes de compra · Vista ampliada</strong><button id="closeOcExpanded" class="btn btn-tool" type="button">✕ Cerrar</button></div>
+        <div id="tableWrap" class="table-wrap" hidden><div class="oc-expanded-toolbar" id="ocExpandedToolbar" hidden><strong>Historial de órdenes de compra · Vista ampliada</strong><span id="ocExpandedCount" class="oc-expanded-count" aria-live="polite">0 registros</span><button id="closeOcExpanded" class="btn btn-tool" type="button">✕ Cerrar</button></div>
           <table>
             <thead>
               <tr>
@@ -1619,6 +1619,7 @@ window.locadoresSupabaseClient=supabase;
 
     function drawRows() {
       resultCount.textContent = String(visibleRows.length);
+      const expandedCount=document.getElementById('ocExpandedCount');if(expandedCount)expandedCount.textContent=visibleRows.length+' '+(visibleRows.length===1?'registro':'registros');
       const filtered = visibleRows.length !== allRows.length;
       resultsSummary.textContent = `${visibleRows.length} resultado${visibleRows.length === 1 ? '' : 's'}${filtered ? ' filtrados' : ''} para “${currentTerm}”`;
       resultsBody.innerHTML = '';
