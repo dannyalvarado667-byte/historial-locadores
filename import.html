@@ -302,7 +302,7 @@ $('#confirmImportAccept').onclick=async()=>{
   $('#confirm').disabled=true;$('#confirm').textContent='Guardando…';
   const r=await invoke(sanitize?'sanitize':'confirm');
   $('#confirmHint').textContent='Proceso completado: '+(r.actualizadas||0)+' OC corregidas, '+r.insertadas+' OC nuevas y '+r.nuevos_locadores+' locadores nuevos.';
-  $('#confirm').textContent='Proceso completado';$('#confirm').disabled=true;
+  $('#confirm').textContent='Cerrar ventana';$('#confirm').disabled=false;$('#confirm').onclick=()=>{if(window.parent!==window)window.parent.postMessage({type:'locadores:import-complete-close'},location.origin);else window.location.href='admin.html'};
   $('#confirmImportModal').hidden=true;
  }catch(e){
   $('#confirmHint').textContent='No se pudo completar la operación: '+(e.message||String(e));
