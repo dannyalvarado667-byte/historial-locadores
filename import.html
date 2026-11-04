@@ -182,6 +182,14 @@ body.expanded-preview-open{overflow:hidden}
 .sap-preview-table .column-resize-handle{position:absolute;right:0;top:0;bottom:0;width:10px;cursor:col-resize;touch-action:none;z-index:4;border-right:2px solid transparent}
 .sap-preview-table .column-resize-handle:hover,.sap-preview-table .column-resize-handle:focus-visible{border-right-color:#1967d2;background:#1967d218;outline:none}
 body.resizing-import-column,body.resizing-import-column *{cursor:col-resize!important;user-select:none!important}
+
+/* Plantilla de contingencia: acción secundaria, compacta y alineada a la izquierda */
+.contingency-compact{padding:9px 13px;margin-bottom:12px;background:#f8fbfe}
+.contingency-download-row{justify-content:flex-start;gap:12px;flex-wrap:wrap}
+.contingency-download-row button#downloadContingency{flex:0 0 auto;width:auto;min-height:33px;padding:7px 12px;font-size:.76rem;border-radius:8px;font-weight:700}
+.contingency-download-row p{font-size:.73rem;line-height:1.3;flex:0 1 auto}
+.contingency-download-row p strong{font-weight:750}
+@media(max-width:650px){.contingency-download-row{flex-direction:row;align-items:center;gap:9px}.contingency-download-row button#downloadContingency{width:auto}}
 </style>
 <script>function ordenarPeriodosCCP(a,b){const meses={enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,setiembre:9,septiembre:9,octubre:10,noviembre:11,diciembre:12};const clave=v=>{const t=String(v||'').toLowerCase(),anio=Number((t.match(/20\d{2}/)||['0'])[0]);const encontrados=Object.entries(meses).filter(([m])=>t.includes(m)).map(([,n])=>n);return anio*100+(encontrados.length?Math.min(...encontrados):0)};return clave(a)-clave(b)||String(a).localeCompare(String(b),'es',{numeric:true})}</script></head>
 <body>
@@ -191,7 +199,7 @@ body.resizing-import-column,body.resizing-import-column *{cursor:col-resize!impo
 <div class="import-types"><button class="type-card active" id="typeOc" type="button"><strong>① Órdenes de Compra</strong><span>Excel oficial de Logística: OC, RUC, fechas, monto, expediente y demás datos fuente.</span></button><button class="type-card" id="typeHistory" type="button"><strong>② Historial de pagos procesados</strong><span>CSV de PRINCIPAL: revisiones, remitente, asunto, estado, entregable y observaciones.</span></button></div>
 
 <section class="card contingency-compact" id="contingencyCard">
-<div class="contingency-download-row"><p><strong>Plantilla para carga manual de OC y movimientos.</strong> Úsala para registrar datos sin conexión y subirlos posteriormente.</p><button type="button" class="btn primary" id="downloadContingency">⬇ Descargar plantilla Excel</button></div>
+<div class="contingency-download-row"><button type="button" class="btn secondary" id="downloadContingency" title="Descargar plantilla de contingencia para OC y movimientos">⬇ Plantilla Excel</button><p><strong>Contingencia:</strong> registro manual sin conexión, para importar después.</p></div>
 </section>
 <section class="card" id="uploadCard">
 <div class="grid"><div class="field"><label for="ccp">CCP configurada</label><select id="ccp" required><option value="">Consultando CCP configuradas…</option></select><small id="ccpHelp" style="display:block;margin-top:7px;color:#52647a">Primero registra las reglas de la CCP en Administración. Solo se puede importar en una CCP configurada.</small></div><div class="field"><label for="sheet">Hoja del Excel</label><select id="sheet" disabled><option>Selecciona primero un archivo</option></select></div></div>
