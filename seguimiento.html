@@ -472,16 +472,16 @@ async function boot(){const {data:{session}}=await db.auth.getSession();if(!sess
 // Comparar fechas ISO (AAAA-MM-DD) evita depender de la hora local del navegador.
 // La presentación anterior al primer día habilitado mantiene el estado FINALIZADO,
 // pero muestra el aviso explicativo de Airtable, con días de anticipación.
-const {data:ccpRulesForAlerts, error:ccpRulesAlertError}=await db.from('ccp_configuracion').select('periodo,mensajes').limit(200);
-const earlyMessageByPeriod=new Map((ccpRulesAlertError?[]:ccpRulesForAlerts||[]).map(r=>[r.periodo,String(r.mensajes?.anticipado||'PRESENTACIÓN ANTES DEL PLAZO PERMITIDO')]));
+const {data:ccpRulesForAlerts, error:ccpRulesAlertError}=await db.from('ccp_configuracion').select('periodo,mensajes,dia_inicio_1,dia_inicio_2,dia_inicio_3').limit(200);
+const earlyRuleByPeriod=new Map((ccpRulesAlertError?[]:ccpRulesForAlerts||[]).map(r=>[r.periodo,r]));
 const earlyDetail=x=>{
  const date=String(x?.fecha_presentacion||'').slice(0,10),start=String(x?.fecha_habilitacion||'').slice(0,10);
  if(!date||!start||date>=start)return '';
  const days=Math.round((Date.parse(start+'T00:00:00Z')-Date.parse(date+'T00:00:00Z'))/86400000);
  if(!Number.isFinite(days)||days<=0)return '';
  const d=iso=>iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(0,4);
- const label=earlyMessageByPeriod.get(x.periodo)||'PRESENTACIÓN ANTES DEL PLAZO PERMITIDO';
- return '🔵 '+label+'. Presentado el '+d(date)+', '+days+(days===1?' día antes':' días antes')+' de la fecha permitida ('+d(start)+' - día '+(x.numero_entregable===1?'20':'de habilitación')+').';
+ const rule=earlyRuleByPeriod.get(x.periodo);const label=String(rule?.mensajes?.anticipado||'PRESENTACIÓN ANTES DEL PLAZO PERMITIDO');const day=rule?.['dia_inicio_'+Number(x.numero_entregable)]||((Number(x.numero_entregable)===1)?20:null);
+ return '🔵 '+label+'. Presentado el '+d(date)+', '+days+(days===1?' día antes':' días antes')+' de la fecha permitida ('+d(start)+(day?' - día '+day:'')+').';
 };
 window.trayRows=(trayData||[]).map(x=>{
  if(!x.fecha_presentacion||x.alerta==='DESISTIÓ')return x;
