@@ -600,6 +600,27 @@ body.oc-expanded-active{overflow:hidden!important}
 #tableWrap.oc-expanded{position:fixed!important;inset:2vh 2vw!important;width:96vw!important;height:96vh!important;max-width:none!important;max-height:none!important;overflow:auto!important;z-index:3000!important;background:#fff!important;border:1px solid #cbd9e8;border-radius:14px;box-shadow:0 0 0 100vmax #102b4c9c,0 22px 65px #102b4c55}
 #tableWrap.oc-expanded thead th{position:sticky!important;top:49px!important;z-index:20;background:#e8f0f9!important}
 #tableWrap.oc-expanded table{max-width:none!important}
+
+/* Vista ampliada: anchos legibles y estables por campo, sin comprimir fechas ni nombres */
+#tableWrap.oc-expanded table{width:max-content!important;min-width:100%!important;table-layout:fixed!important}
+#tableWrap.oc-expanded th,#tableWrap.oc-expanded td{box-sizing:border-box!important}
+#tableWrap.oc-expanded thead th{white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;line-height:1.25!important;padding:12px 10px!important;vertical-align:middle!important}
+#tableWrap.oc-expanded tbody td{padding:10px!important;vertical-align:middle!important;line-height:1.4!important}
+#tableWrap.oc-expanded th[data-col-key="ver_nombre"]{width:230px!important;min-width:230px!important}
+#tableWrap.oc-expanded th[data-col-key="ver_ruc"]{width:125px!important;min-width:125px!important}
+#tableWrap.oc-expanded th[data-col-key="ver_oc"]{width:130px!important;min-width:130px!important}
+#tableWrap.oc-expanded th[data-col-key="ver_fecha_emision"],#tableWrap.oc-expanded th[data-col-key="ver_fecha_inicio"],#tableWrap.oc-expanded th[data-col-key="ver_fecha_termino"]{width:145px!important;min-width:145px!important}
+#tableWrap.oc-expanded th[data-col-key="ver_expediente"]{width:185px!important;min-width:185px!important}
+#tableWrap.oc-expanded th[data-col-key="ver_monto"]{width:140px!important;min-width:140px!important}
+#tableWrap.oc-expanded th[data-col-key="ver_plazo"]{width:130px!important;min-width:130px!important}
+#tableWrap.oc-expanded th[data-col-key="ver_area"]{width:145px!important;min-width:145px!important}
+#tableWrap.oc-expanded th[data-col-key="ver_entregables"]{width:120px!important;min-width:120px!important}
+#tableWrap.oc-expanded th[data-col-key="ver_status"]{width:155px!important;min-width:155px!important}
+#tableWrap.oc-expanded th[data-col-key="ver_credito"]{width:155px!important;min-width:155px!important}
+#tableWrap.oc-expanded th.tracking-state-col{width:185px!important;min-width:185px!important}
+#tableWrap.oc-expanded .tracking-state-cell{min-width:185px!important}
+#tableWrap.oc-expanded thead th:first-child{min-width:42px!important;width:42px!important}
+#tableWrap.oc-expanded tbody td:first-child{white-space:nowrap!important}
 </style>
 </head>
 <body class="login-sidebar-hidden">
