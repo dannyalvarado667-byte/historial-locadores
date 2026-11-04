@@ -161,6 +161,19 @@ body.expanded-preview-open{overflow:hidden}
 #confirmImportModal .ccp-warning-actions button{min-width:130px}
 @media(max-height:580px){#confirmImportModal{padding:8px}#confirmImportModal .ccp-warning-dialog{max-height:calc(100dvh - 16px)}#confirmImportModal .ccp-warning-head{padding:9px 15px}#confirmImportModal .ccp-warning-body{padding:10px 15px}#confirmImportModal .ccp-warning-actions{padding:8px 15px}}
 @media(max-width:480px){#confirmImportModal .ccp-warning-actions{flex-wrap:nowrap;gap:8px}#confirmImportModal .ccp-warning-actions button{min-width:0;flex:1;font-size:.82rem}}
+
+/* Columnas compactas en la revisión de importaciones */
+.sap-preview-table{min-width:0;width:max-content;table-layout:auto}
+.sap-preview-table th,.sap-preview-table td{min-width:0;max-width:none;padding:10px 11px}
+.sap-preview-table th:nth-child(1),.sap-preview-table td:nth-child(1){width:55px;min-width:55px;max-width:55px;text-align:center}
+.sap-preview-table th:nth-child(2),.sap-preview-table td:nth-child(2){width:115px;min-width:115px;max-width:115px}
+.sap-preview-table th:nth-child(3),.sap-preview-table td:nth-child(3){width:150px;min-width:150px;max-width:260px;white-space:normal}
+.sap-preview-table th:nth-child(4),.sap-preview-table td:nth-child(4){width:130px;min-width:130px;white-space:nowrap}
+.sap-preview-table th:nth-child(5),.sap-preview-table td:nth-child(5){width:135px;min-width:135px;white-space:nowrap}
+.sap-preview-table th:nth-child(6),.sap-preview-table td:nth-child(6){min-width:250px;max-width:290px;white-space:normal;overflow-wrap:anywhere}
+.sap-preview-table th:nth-child(n+7),.sap-preview-table td:nth-child(n+7){min-width:115px;max-width:260px}
+.sap-preview-table td:nth-child(13){min-width:115px}
+.sap-preview-table .decision-column .diff-comparison{min-width:0;max-width:100%;overflow-wrap:anywhere}
 </style>
 </head>
 <body>
