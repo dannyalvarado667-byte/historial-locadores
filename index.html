@@ -588,7 +588,7 @@ body.login-sidebar-hidden>header,body.login-sidebar-hidden>.shell>header{margin-
 #ocFloatingHeader{position:fixed;z-index:205;overflow:hidden;pointer-events:auto;background:#e8eff8;border:1px solid #dfe5ee;box-shadow:0 3px 8px #17365d25;display:none}
 #ocFloatingHeader table{border-collapse:separate;border-spacing:0;table-layout:fixed;margin:0;width:max-content}
 #ocFloatingHeader th{position:static!important;top:auto!important;box-sizing:border-box;white-space:normal;background:#e8eff8!important;color:#1b304b!important;font-size:10px!important;font-weight:850!important;padding:11px 8px!important;line-height:1.35!important;border-bottom:1px solid #dfe5ee;cursor:pointer}
-</style>
+.status-filter-count{font-size:11px;color:#536c86;font-weight:800;white-space:nowrap;margin-left:5px}</style>
 </head>
 <body class="login-sidebar-hidden">
   <div class="shell">
@@ -1375,9 +1375,10 @@ window.locadoresSupabaseClient=supabase;
       updatePeriodButton();
       renderFilterMulti('filterArea',uniqueValues('subgerencia'))
       const states=[...new Set(allRows.map(row => trackingStatusByOc.get(String(row.numero_oc||'')+'|'+String(row.periodo||''))?.alerta||'SIN SEGUIMIENTO'))].sort((a,b)=>String(a).localeCompare(String(b),'es'));
-      $('#filterStatusOptions').innerHTML=states.map(state=>'<label><input type="checkbox" value="'+escapeHTML(state)+'" '+(selectedTrackingStates.has(state)?'checked':'')+'><span>'+escapeHTML(state)+'</span></label>').join('');
+      $('#filterStatusOptions').innerHTML=states.map(state=>'<label><input type="checkbox" value="'+escapeHTML(state)+'" '+(selectedTrackingStates.has(state)?'checked':'')+'><span>'+escapeHTML(state)+' <span class="status-filter-count" data-status-count="'+escapeHTML(state)+'">(0)</span></span></label>').join('');
       updateStatusFilterButton();
-      renderFilterMulti('filterDeliverables',uniqueValues('numero_entregables'))
+      renderFilterMulti('filterDeliverables',uniqueValues('numero_entregables'));
+      updateTrackingStateCounts()
     }
 
     const selectedAreas=new Set(),selectedDeliverables=new Set();
@@ -1387,6 +1388,18 @@ window.locadoresSupabaseClient=supabase;
     for(const id of ['filterArea','filterDeliverables']){const wrap=$('#'+id+'Wrap'),menu=$('#'+id+'Menu'),btn=$('#'+id+'Btn'),selected=id==='filterArea'?selectedAreas:selectedDeliverables;btn.addEventListener('click',()=>{const opening=menu.hidden;document.querySelectorAll('.filter-multi-menu').forEach(el=>el.hidden=true);menu.hidden=!opening;btn.setAttribute('aria-expanded',String(opening))});menu.querySelector('.filter-multi-close').addEventListener('click',()=>{menu.hidden=true;btn.setAttribute('aria-expanded','false')});menu.querySelector('.filter-multi-search')?.addEventListener('input',e=>{const term=e.target.value.toLocaleLowerCase('es');menu.querySelectorAll('.filter-multi-option').forEach(el=>el.hidden=!el.textContent.toLocaleLowerCase('es').includes(term))});menu.addEventListener('change',e=>{if(!e.target.matches('input[type=checkbox]'))return;e.target.checked?selected.add(e.target.value):selected.delete(e.target.value);updateFilterMulti(id);applyFilters()});menu.querySelector('[data-action=all]').addEventListener('click',()=>{filterMultiValues[id].forEach(v=>selected.add(v));renderFilterMulti(id,filterMultiValues[id]);applyFilters()});menu.querySelector('[data-action=clear]').addEventListener('click',()=>{selected.clear();renderFilterMulti(id,filterMultiValues[id]);applyFilters()});document.addEventListener('click',e=>{if(!wrap.contains(e.target)){menu.hidden=true;btn.setAttribute('aria-expanded','false')}})}
     const selectedTrackingStates=new Set();
     function updateStatusFilterButton(){const btn=$('#filterStatusButton');const count=selectedTrackingStates.size;btn.innerHTML=(count===0?'Todos':count===1?escapeHTML([...selectedTrackingStates][0]):count+' estados seleccionados')+' <span>▾</span>';btn.title=count?[...selectedTrackingStates].join(', '):'Todos los estados';}
+    function updateTrackingStateCounts(){
+      const counts=new Map();const oc=$('#filterOc').value.trim();
+      allRows.forEach(row=>{
+        if(currentColumns.ver_credito!==false&&selectedPeriods.size&&!selectedPeriods.has(String(row.periodo??'')))return;
+        if(currentColumns.ver_area!==false&&selectedAreas.size&&!selectedAreas.has(String(row.subgerencia??'')))return;
+        if(currentColumns.ver_entregables!==false&&selectedDeliverables.size&&!selectedDeliverables.has(String(row.numero_entregables??'')))return;
+        if(currentColumns.ver_oc!==false&&oc&&!String(row.numero_oc??'').includes(oc))return;
+        const state=String(trackingStatusByOc.get(String(row.numero_oc||'')+'|'+String(row.periodo||''))?.alerta||'SIN SEGUIMIENTO');
+        counts.set(state,(counts.get(state)||0)+1);
+      });
+      $('#filterStatusOptions').querySelectorAll('[data-status-count]').forEach(el=>{el.textContent='('+(counts.get(el.dataset.statusCount)||0)+')'});
+    }
     function applyFilters() {
       const area = currentColumns.ver_area === false ? [] : [...selectedAreas];
       const status = currentColumns.ver_tracking === false ? [] : [...selectedTrackingStates];
@@ -1401,6 +1414,7 @@ window.locadoresSupabaseClient=supabase;
       );
       applySort(visibleRows);
       drawRows();
+      updateTrackingStateCounts();
     }
 
     function visibleColumnDefs() { return columnDefs.filter(([k]) => currentColumns[k] !== false); }
