@@ -908,8 +908,8 @@ window.locadoresSupabaseClient=supabase;
       const originals=[...head.querySelectorAll('th')].filter(th=>getComputedStyle(th).display!=='none');
       const widths=originals.map(th=>Math.ceil(th.getBoundingClientRect().width));
       const key=originals.map((th,i)=>th.textContent.trim()+':'+widths[i]).join('|');
-      if(key!==ocFloatingKey){
-        ocFloating.innerHTML='<table><thead><tr>'+originals.map((th,i)=>'<th style="width:'+widths[i]+'px;min-width:'+widths[i]+'px;max-width:'+widths[i]+'px">'+th.innerHTML+'</th>').join('')+'</tr></thead></table>';
+      if(key!==ocFloatingKey&&!ocResizing){
+        ocFloating.innerHTML='<table><thead><tr>'+originals.map((th,i)=>'<th style="width:'+widths[i]+'px;min-width:'+widths[i]+'px;max-width:'+widths[i]+'px">'+th.innerHTML.replace(/<span class="oc-resize-handle"[^>]*><\\/span>/g,'')+'</th>').join('')+'</tr></thead></table>';
         ocFloatingKey=key;
         [...ocFloating.querySelectorAll('th')].forEach((clone,i)=>{
           const key=originals[i].dataset.colKey;
@@ -918,7 +918,7 @@ window.locadoresSupabaseClient=supabase;
           clone.title='Arrastra para mover esta columna';
           clone.onclick=()=>originals[i].click();
           clone.addEventListener('dragstart',e=>{
-            if(!key)return;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','oc-column:'+key);
+            if(!key||ocResizing||e.target.closest('.oc-resize-handle')){e.preventDefault();return}e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','oc-column:'+key);
             ocFloating.dataset.draggingColumn=key;clone.style.opacity='.5';
           });
           clone.addEventListener('dragover',e=>{
@@ -1027,26 +1027,37 @@ window.locadoresSupabaseClient=supabase;
         handle.addEventListener('click',e=>{e.preventDefault();e.stopPropagation()});
         handle.addEventListener('dragstart',e=>e.preventDefault());
         handle.addEventListener('pointerdown',e=>{
-          if(e.button!==0)return;e.preventDefault();e.stopPropagation();
-          ocResizing=true;const key=th.dataset.colKey;
+          if(e.button!==0)return;
+          e.preventDefault();e.stopPropagation();
+          ocResizing=true;
+          const key=th.dataset.colKey;
           const original=ocTableWrap.querySelector('thead th[data-col-key="'+key+'"]');
           const startWidth=original?.getBoundingClientRect().width||th.getBoundingClientRect().width;
           const startX=e.clientX;
-          handle.setPointerCapture(e.pointerId);
+          // Impide el arrastre HTML5 del encabezado durante el ajuste de ancho.
+          const dragged=[th,original].filter(Boolean);
+          dragged.forEach(h=>h.draggable=false);
+          document.body.style.cursor='col-resize';
+          document.body.style.userSelect='none';
           const move=ev=>{
             const min=key==='ver_nombre'?200:75;
             ocColumnWidths[key]=Math.max(min,Math.round(startWidth+ev.clientX-startX));
             applyOcColumnWidths();
-            requestAnimationFrame(syncOcFloatingHeader);
+            const clone=ocFloating.querySelector('th[data-col-key="'+key+'"]');
+            if(clone){const w=ocColumnWidths[key];clone.style.width=w+'px';clone.style.minWidth=w+'px';clone.style.maxWidth=w+'px'}
           };
           const stop=()=>{
-            handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',stop);handle.removeEventListener('pointercancel',stop);
+            window.removeEventListener('pointermove',move,true);
+            window.removeEventListener('pointerup',stop,true);
+            window.removeEventListener('pointercancel',stop,true);
+            dragged.forEach(h=>h.draggable=true);
+            document.body.style.cursor='';document.body.style.userSelect='';
             localStorage.setItem('locadores:columnWidths',JSON.stringify(ocColumnWidths));
-            ocResizing=false;requestAnimationFrame(syncOcFloatingHeader);
+            ocResizing=false;ocFloatingKey='';requestAnimationFrame(syncOcFloatingHeader);
           };
-          handle.addEventListener('pointermove',move);
-          handle.addEventListener('pointerup',stop,{once:true});
-          handle.addEventListener('pointercancel',stop,{once:true});
+          window.addEventListener('pointermove',move,true);
+          window.addEventListener('pointerup',stop,true);
+          window.addEventListener('pointercancel',stop,true);
         });
         th.appendChild(handle);
       });
@@ -1056,7 +1067,7 @@ window.locadoresSupabaseClient=supabase;
       let dragging=null;
       headerRow.querySelectorAll('th[data-col-key]').forEach(th=>{
         th.draggable=true;th.title=(th.title?th.title+' · ':'')+'Arrastra para cambiar el orden de las columnas';
-        th.addEventListener('dragstart',e=>{dragging=th.dataset.colKey;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',dragging);th.style.opacity='.45'});
+        th.addEventListener('dragstart',e=>{if(ocResizing||e.target.closest('.oc-resize-handle')){e.preventDefault();return}dragging=th.dataset.colKey;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',dragging);th.style.opacity='.45'});
         th.addEventListener('dragend',()=>{dragging=null;th.style.opacity='';headerRow.querySelectorAll('th').forEach(h=>h.style.outline='')});
         th.addEventListener('dragover',e=>{if(!dragging||dragging===th.dataset.colKey)return;e.preventDefault();e.dataTransfer.dropEffect='move';th.style.outline='2px dashed #1967d2'});
         th.addEventListener('dragleave',()=>{th.style.outline=''});
