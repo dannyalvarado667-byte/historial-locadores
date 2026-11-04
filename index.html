@@ -587,7 +587,7 @@ body.login-sidebar-hidden>header,body.login-sidebar-hidden>.shell>header{margin-
 /* Cabecera flotante de OC: visible incluso cuando la barra de filtros tapa el encabezado original. */
 #ocFloatingHeader{position:fixed;z-index:205;overflow:hidden;pointer-events:auto;background:#e8eff8;border:1px solid #dfe5ee;box-shadow:0 3px 8px #17365d25;display:none}
 #ocFloatingHeader table{border-collapse:separate;border-spacing:0;table-layout:fixed;margin:0;width:max-content}
-#ocFloatingHeader th{position:static!important;top:auto!important;box-sizing:border-box;white-space:normal;background:#e8eff8!important;color:#1b304b!important;font-size:10px!important;font-weight:850!important;padding:11px 8px!important;line-height:1.35!important;border-bottom:1px solid #dfe5ee;cursor:pointer}
+#ocFloatingHeader th[draggable=true]{cursor:grab}#ocFloatingHeader th[draggable=true]:active{cursor:grabbing}#ocFloatingHeader th{position:static!important;top:auto!important;box-sizing:border-box;white-space:normal;background:#e8eff8!important;color:#1b304b!important;font-size:10px!important;font-weight:850!important;padding:11px 8px!important;line-height:1.35!important;border-bottom:1px solid #dfe5ee;cursor:pointer}
 .status-filter-count{font-size:11px;color:#536c86;font-weight:800;white-space:nowrap;margin-left:5px}#tableWrap thead th[draggable=true]{cursor:grab}#tableWrap thead th[draggable=true]:active{cursor:grabbing}</style>
 </head>
 <body class="login-sidebar-hidden">
@@ -902,7 +902,31 @@ window.locadoresSupabaseClient=supabase;
       if(key!==ocFloatingKey){
         ocFloating.innerHTML='<table><thead><tr>'+originals.map((th,i)=>'<th style="width:'+widths[i]+'px;min-width:'+widths[i]+'px;max-width:'+widths[i]+'px">'+th.innerHTML+'</th>').join('')+'</tr></thead></table>';
         ocFloatingKey=key;
-        [...ocFloating.querySelectorAll('th')].forEach((clone,i)=>{clone.onclick=()=>originals[i].click()});
+        [...ocFloating.querySelectorAll('th')].forEach((clone,i)=>{
+          const key=originals[i].dataset.colKey;
+          clone.dataset.colKey=key||'';
+          clone.draggable=!!key;
+          clone.title='Arrastra para mover esta columna';
+          clone.onclick=()=>originals[i].click();
+          clone.addEventListener('dragstart',e=>{
+            if(!key)return;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','oc-column:'+key);
+            ocFloating.dataset.draggingColumn=key;clone.style.opacity='.5';
+          });
+          clone.addEventListener('dragover',e=>{
+            if(!ocFloating.dataset.draggingColumn||!key)return;
+            e.preventDefault();e.dataTransfer.dropEffect='move';clone.style.outline='2px dashed #1967d2';
+          });
+          clone.addEventListener('dragleave',()=>{clone.style.outline=''});
+          clone.addEventListener('drop',e=>{
+            e.preventDefault();e.stopPropagation();clone.style.outline='';
+            const from=ocFloating.dataset.draggingColumn||'';delete ocFloating.dataset.draggingColumn;
+            if(from&&key)moveOcColumn(from,key);
+          });
+          clone.addEventListener('dragend',()=>{
+            delete ocFloating.dataset.draggingColumn;clone.style.opacity='';
+            ocFloating.querySelectorAll('th').forEach(th=>th.style.outline='');
+          });
+        });
       }
       ocFloating.style.left=wrapRect.left+'px';ocFloating.style.width=wrapRect.width+'px';ocFloating.style.top=topLimit+'px';ocFloating.style.height=h+'px';
       const cloned=ocFloating.querySelector('table');if(cloned){cloned.style.transform='translateX(-'+ocTableWrap.scrollLeft+'px)'}
@@ -957,6 +981,14 @@ window.locadoresSupabaseClient=supabase;
       const byKey=new Map([...headerRow.querySelectorAll('th[data-col-key]')].map(th=>[th.dataset.colKey,th]));
       columnDefs.forEach(([key])=>{const th=byKey.get(key);if(th)headerRow.appendChild(th)});
     }
+    function moveOcColumn(fromKey,toKey){
+      if(!fromKey||!toKey||fromKey===toKey)return;
+      const from=columnDefs.findIndex(([k])=>k===fromKey),to=columnDefs.findIndex(([k])=>k===toKey);
+      if(from<0||to<0)return;
+      const moved=columnDefs.splice(from,1)[0];columnDefs.splice(to,0,moved);
+      localStorage.setItem('locadores:columnOrder',JSON.stringify(columnDefs.map(([k])=>k)));
+      reorderOcHeaders();drawRows();ocFloatingKey='';requestAnimationFrame(syncOcFloatingHeader);
+    }
     function enableOcColumnDragging(){
       const headerRow=document.querySelector('#tableWrap thead tr');if(!headerRow)return;
       let dragging=null;
@@ -968,11 +1000,7 @@ window.locadoresSupabaseClient=supabase;
         th.addEventListener('dragleave',()=>{th.style.outline=''});
         th.addEventListener('drop',e=>{
           e.preventDefault();th.style.outline='';if(!dragging||dragging===th.dataset.colKey)return;
-          const from=columnDefs.findIndex(([k])=>k===dragging),to=columnDefs.findIndex(([k])=>k===th.dataset.colKey);
-          if(from<0||to<0)return;
-          const moved=columnDefs.splice(from,1)[0];columnDefs.splice(to,0,moved);
-          localStorage.setItem('locadores:columnOrder',JSON.stringify(columnDefs.map(([k])=>k)));
-          reorderOcHeaders();drawRows();ocFloatingKey='';requestAnimationFrame(syncOcFloatingHeader);
+          moveOcColumn(dragging,th.dataset.colKey);
         });
       });
     }
