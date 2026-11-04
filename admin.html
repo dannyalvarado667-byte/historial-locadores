@@ -490,7 +490,21 @@ header #userEmail,header #sessionUser{display:none!important}
             </table>
           </div>
         </section>
-<section class="admin-panel admin-tools-panel" style="margin-top:24px">
+<section class="admin-panel" id="auditPanel" style="margin-top:24px">
+<div class="admin-head"><div><h2>🛡 Auditoría del sistema</h2><p>Historial automático de altas, cambios y eliminaciones desde la activación de la auditoría. Solo administradores.</p></div><button class="btn btn-primary" id="auditRefresh" type="button">Actualizar registros</button></div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin:14px 0" id="auditTabs">
+<button type="button" class="btn" data-audit-table="">Todos</button>
+<button type="button" class="btn" data-audit-table="ordenes_compra">Órdenes de compra</button>
+<button type="button" class="btn" data-audit-table="historial_revisiones_pago">Movimientos</button>
+<button type="button" class="btn" data-audit-table="seguimiento_oc">Fechas MPD y seguimiento</button>
+<button type="button" class="btn" data-audit-table="ccp_configuracion,ccp_excepciones">Configuración CCP</button>
+<button type="button" class="btn" data-audit-table="importaciones_oc,importacion_oc_auditoria,importaciones_historial_pago">Importaciones</button>
+<button type="button" class="btn" data-audit-table="locadores">Locadores</button></div>
+<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px"><input id="auditSearch" placeholder="Buscar OC, RUC, registro o valor" aria-label="Buscar en auditoría" style="flex:1;min-width:190px;padding:10px;border:1px solid #dfe5ee;border-radius:8px"><select id="auditOperation" aria-label="Tipo de operación" style="padding:10px;border:1px solid #dfe5ee;border-radius:8px"><option value="">Todas las operaciones</option><option value="INSERT">Creaciones</option><option value="UPDATE">Modificaciones</option><option value="DELETE">Eliminaciones</option></select></div>
+<p id="auditStatus" style="color:#53647a;font-size:13px">Consulta los eventos de auditoría registrados desde su activación.</p>
+<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Fecha (Perú)</th><th>Sección</th><th>Operación</th><th>Registro</th><th>Usuario</th><th>Detalle del cambio</th></tr></thead><tbody id="auditBody"><tr><td colspan="6">Pulsa «Actualizar registros» para consultar.</td></tr></tbody></table></div>
+<div style="display:flex;justify-content:flex-end;margin-top:10px"><button id="auditMore" class="btn" type="button" hidden>Mostrar más eventos</button></div>
+</section><section class="admin-panel admin-tools-panel" style="margin-top:24px">
   <div class="admin-head">
     <div><h2>Importar Excel</h2><p>Carga órdenes de compra mediante archivos Excel, utilizando el procedimiento de importación del sistema.</p></div>
   </div>
@@ -743,4 +757,41 @@ document.addEventListener('DOMContentLoaded',()=>{
  // Esperar a que el usuario entre a la sección de administración.
  load();
 });
+</script><script type="module">
+import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const db=createClient('https://acckrmanpgycunpvmfrl.supabase.co','sb_publishable_2nDjJmqL9oNdWGcpm3MgnQ_KXg5WuBI');
+const el=id=>document.getElementById(id);
+const safe=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+let tab='',offset=0,all=[],busy=false;
+const categories={ordenes_compra:'Órdenes de compra',historial_revisiones_pago:'Movimientos',seguimiento_oc:'Fechas MPD / seguimiento',ccp_configuracion:'Configuración CCP',ccp_excepciones:'Excepciones CCP',importaciones_oc:'Importaciones OC',importacion_oc_auditoria:'Detalle de importación',importaciones_historial_pago:'Importación pagos',locadores:'Locadores'};
+const fmt=d=>new Intl.DateTimeFormat('es-PE',{timeZone:'America/Lima',dateStyle:'short',timeStyle:'medium'}).format(new Date(d));
+const describe=e=>{
+ if(e.operacion==='INSERT')return 'Registro creado';
+ if(e.operacion==='DELETE')return 'Registro eliminado';
+ const a=e.datos_anteriores||{},b=e.datos_nuevos||{};
+ const fields=Object.keys(b).filter(k=>JSON.stringify(a[k])!==JSON.stringify(b[k])&&!['actualizado_en','actualizado_por'].includes(k));
+ return fields.length?fields.map(k=>k+': '+String(a[k]??'∅').slice(0,110)+' → '+String(b[k]??'∅').slice(0,110)).join(' | '):'Actualización técnica';
+};
+const render=()=>{
+ const term=el('auditSearch').value.trim().toLowerCase();
+ const op=el('auditOperation').value;
+ const filtered=all.filter(e=>(!op||e.operacion===op)&&(!term||JSON.stringify(e).toLowerCase().includes(term)));
+ el('auditBody').innerHTML=filtered.map(e=>'<tr><td>'+safe(fmt(e.fecha))+'</td><td>'+safe(categories[e.tabla]||e.tabla)+'</td><td>'+safe({INSERT:'CREACIÓN',UPDATE:'MODIFICACIÓN',DELETE:'ELIMINACIÓN'}[e.operacion]||e.operacion)+'</td><td>'+safe(e.registro_id)+'</td><td>'+safe(e.usuario_id||'No identificado')+'</td><td style="max-width:440px;overflow-wrap:anywhere"><details><summary>'+safe(describe(e).slice(0,140))+'</summary><div style="margin-top:8px"><strong>Antes:</strong><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+safe(JSON.stringify(e.datos_anteriores,null,2))+'</pre><strong>Después:</strong><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+safe(JSON.stringify(e.datos_nuevos,null,2))+'</pre></div></details></td></tr>').join('')||'<tr><td colspan="6">No hay eventos coincidentes.</td></tr>';
+ el('auditStatus').textContent=all.length+' evento(s) cargados. Los filtros de búsqueda se aplican a los eventos cargados.';
+};
+const load=async(reset=true)=>{
+ if(busy)return;busy=true;el('auditRefresh').disabled=true;el('auditStatus').textContent='Consultando auditoría…';
+ try{
+  const {data:{user}}=await db.auth.getUser();if(!user)throw Error('Debes iniciar sesión.');
+  if(reset){offset=0;all=[]}
+  let q=db.from('auditoria_sistema').select('id,fecha,tabla,operacion,registro_id,usuario_id,datos_anteriores,datos_nuevos').order('fecha',{ascending:false}).range(offset,offset+99);
+  if(tab)q=q.in('tabla',tab.split(','));
+  const {data,error}=await q;if(error)throw error;
+  all.push(...(data||[]));offset+=data?.length||0;el('auditMore').hidden=(data||[]).length<100;render();
+ }catch(e){el('auditStatus').textContent='No se pudo consultar: '+(e.message||e)}
+ finally{busy=false;el('auditRefresh').disabled=false}
+};
+el('auditRefresh').onclick=()=>load(true);el('auditMore').onclick=()=>load(false);
+el('auditSearch').oninput=render;el('auditOperation').onchange=render;
+el('auditTabs').addEventListener('click',e=>{const b=e.target.closest('[data-audit-table]');if(!b)return;tab=b.dataset.auditTable;el('auditTabs').querySelectorAll('button').forEach(x=>{x.style.background=x===b?'#eaf2ff':'';x.style.borderColor=x===b?'#1967d2':''});load(true)});
 </script></body></html>
