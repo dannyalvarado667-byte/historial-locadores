@@ -824,6 +824,8 @@ body.login-sidebar-hidden>header,body.login-sidebar-hidden>.shell>header{margin-
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
   <script type="module">
+function ordenarPeriodosCCP(a,b){const meses={enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,setiembre:9,septiembre:9,octubre:10,noviembre:11,diciembre:12};const clave=v=>{const t=String(v||'').toLowerCase(),anio=Number((t.match(/20\\d{2}/)||['0'])[0]);const encontrados=Object.entries(meses).filter(([m])=>new RegExp('\\b'+m+'\\b').test(t)).map(([,n])=>n);return anio*100+(encontrados.length?Math.min(...encontrados):0)};return clave(a)-clave(b)||String(a).localeCompare(String(b),'es',{numeric:true})}
+
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
     const SUPABASE_URL = 'https://acckrmanpgycunpvmfrl.supabase.co';
@@ -1320,7 +1322,7 @@ window.locadoresSupabaseClient=supabase;
 
     function uniqueValues(key) {
       return [...new Set(allRows.map(r => r[key]).filter(v => v !== null && v !== undefined && v !== ''))]
-        .sort((a,b) => String(a).localeCompare(String(b), 'es', {numeric:true}));
+        .sort(key === 'periodo' ? ordenarPeriodosCCP : (a,b) => String(a).localeCompare(String(b), 'es', {numeric:true}));
     }
 
     function fillSelect(selector, values, firstLabel) {
