@@ -151,6 +151,16 @@ body.expanded-preview-open{overflow:hidden}
  .diff-comparison{min-width:370px;max-width:650px;white-space:normal}.diff-comparison table{width:100%;border-collapse:collapse;font-size:.78rem}.diff-comparison th,.diff-comparison td{padding:8px;border:1px solid #d7e3f1;text-align:left;vertical-align:top}.diff-comparison th{background:#e9f2fd;color:#17365d}.diff-name-warning{color:#8b5c12;font-weight:650;font-size:.77rem}.confirm-diff-review{margin:14px 0;padding:12px;border:1px solid #e7d4a8;border-radius:12px;background:#fffbf0;font-size:.85rem}.confirm-diff-item{padding:10px 0;border-bottom:1px solid #e7d4a8}.confirm-diff-item div{margin-top:6px;overflow-wrap:anywhere}
  .field-choice-list{display:grid;gap:8px;margin-top:9px}.field-choice{padding:10px;background:#f4f8fd;border:1px solid #d6e3f3;border-radius:10px}.field-choice>strong{display:block;margin-bottom:7px;color:#17365d}.field-choice label{display:block;padding:6px 0;font-size:.81rem;cursor:pointer;white-space:normal}.field-choice input{accent-color:#1767d1;margin-right:6px}.confirm-diff-review{max-height:43vh;overflow:auto}
  .sap-preview-table th:nth-child(3),.sap-preview-table td:nth-child(3){min-width:310px;max-width:370px;white-space:normal;vertical-align:top}.sap-preview-table .decision-column .field-choice{padding:8px}.sap-preview-table .decision-column .field-choice label{overflow-wrap:anywhere}.sap-preview-table .decision-column .diff-comparison{min-width:290px}
+
+/* Confirmación de importación: encabezado y acciones siempre visibles */
+#confirmImportModal{align-items:center;overflow:hidden}
+#confirmImportModal .ccp-warning-dialog{display:flex;flex-direction:column;width:min(560px,100%);max-height:calc(100dvh - 32px);min-height:0;overflow:hidden}
+#confirmImportModal .ccp-warning-head{flex:0 0 auto;padding:15px 20px 12px}
+#confirmImportModal .ccp-warning-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:16px 20px;scrollbar-gutter:stable}
+#confirmImportModal .ccp-warning-actions{flex:0 0 auto;position:relative;z-index:2;background:#fff;border-top:1px solid #dfe5ee;padding:12px 20px 16px;box-shadow:0 -6px 15px #17365d0a}
+#confirmImportModal .ccp-warning-actions button{min-width:130px}
+@media(max-height:580px){#confirmImportModal{padding:8px}#confirmImportModal .ccp-warning-dialog{max-height:calc(100dvh - 16px)}#confirmImportModal .ccp-warning-head{padding:9px 15px}#confirmImportModal .ccp-warning-body{padding:10px 15px}#confirmImportModal .ccp-warning-actions{padding:8px 15px}}
+@media(max-width:480px){#confirmImportModal .ccp-warning-actions{flex-wrap:nowrap;gap:8px}#confirmImportModal .ccp-warning-actions button{min-width:0;flex:1;font-size:.82rem}}
 </style>
 </head>
 <body>
