@@ -807,10 +807,29 @@ body.oc-expanded-active{overflow:hidden!important}
           <div><h2 id="detailTitle">Detalle de la Orden de Compra</h2><p id="detailSubtitle"></p></div>
           <button id="detailClose" class="detail-close" type="button" aria-label="Cerrar">×</button>
         </div>
-        <div id="detailGrid" class="detail-grid"></div>
+        <div id="detailGrid" class="detail-grid"></div><div id="ocEditActions" style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px" hidden><button id="ocOpenEdit" class="btn btn-primary" type="button">✎ Editar registro</button></div>
       </section>
     </div>
-    <div id="columnsOverlay" class="detail-overlay" hidden>
+    <div id="ocEditOverlay" class="detail-overlay" hidden>
+<section class="detail-card" role="dialog" aria-modal="true" aria-labelledby="ocEditTitle" style="max-width:760px;max-height:90vh;overflow:auto">
+<div class="detail-head"><div><h2 id="ocEditTitle">Editar orden de compra</h2><p id="ocEditSubtitle"></p></div><button id="ocEditClose" class="detail-close" type="button" aria-label="Cerrar">×</button></div>
+<form id="ocEditForm" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+<label style="grid-column:1/-1">Apellidos y nombres <input name="nombre" required style="width:100%;padding:9px"></label>
+<label>RUC <input name="ruc" inputmode="numeric" maxlength="11" required style="width:100%;padding:9px"></label>
+<label>N.° OC <input name="numero_oc" inputmode="numeric" required style="width:100%;padding:9px"></label>
+<label>Expediente SGD <input name="expediente" required style="width:100%;padding:9px"></label>
+<label>Monto total (S/) <input name="monto_total" type="number" step="0.01" min="0" required style="width:100%;padding:9px"></label>
+<label>Fecha de emisión <input name="fecha_emision" type="date" required style="width:100%;padding:9px"></label>
+<label>Fecha de inicio <input name="fecha_inicio" type="date" required style="width:100%;padding:9px"></label>
+<label>Fecha de término <input name="fecha_termino" type="date" required style="width:100%;padding:9px"></label>
+<label>Área usuaria <select name="subgerencia" style="width:100%;padding:9px"><option value="">Pendiente</option><option>GSIT</option><option>SGSASIST</option><option>SGSASS</option><option>SGSA</option><option>GPROD</option><option>SGST</option><option>SGOTI</option><option>SGCOM</option><option>OSIN</option><option>GCTIC</option></select></label>
+<label>Entregables <select name="numero_entregables" style="width:100%;padding:9px"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
+<label style="grid-column:1/-1">Descripción del servicio <textarea name="descripcion_pedido" rows="3" style="width:100%;padding:9px"></textarea></label>
+<p style="grid-column:1/-1;font-size:12px;color:#64748b;margin:0">Los cambios de nombre o RUC afectan el registro maestro del locador y podrían reflejarse en otras OC. Los cambios de fechas o entregables pueden requerir revisar el seguimiento.</p>
+<div id="ocEditMessage" role="status" style="grid-column:1/-1"></div>
+<div style="grid-column:1/-1;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><button id="ocSoftDelete" type="button" class="btn" style="color:#b42336">Dar de baja CCP</button><div style="display:flex;gap:8px"><button id="ocEditCancel" type="button" class="btn">Cancelar</button><button type="submit" class="btn btn-primary">Guardar cambios</button></div></div>
+</form></section></div>
+<div id="columnsOverlay" class="detail-overlay" hidden>
       <section class="detail-card columns-card" role="dialog" aria-modal="true" aria-labelledby="columnsTitle">
         <div class="detail-head"><div><h2 id="columnsTitle">Columnas visibles</h2><p id="columnsSubtitle"></p></div><button id="columnsClose" class="detail-close" type="button" aria-label="Cerrar">×</button></div>
         <div id="columnsGrid" class="columns-grid"></div>
@@ -1005,6 +1024,8 @@ window.locadoresSupabaseClient=supabase;
     const detailGrid = $('#detailGrid');
     const detailSubtitle = $('#detailSubtitle');
     let allRows = [];
+    let canEditOc=false;
+    let selectedOcRow=null;
     let trackingStatusByOc = new Map();
     let visibleRows = [];
     let currentTerm = '';
@@ -1159,6 +1180,7 @@ window.locadoresSupabaseClient=supabase;
       const ownPerms = Array.isArray(profile.app_user_permissions) ? profile.app_user_permissions[0] : profile.app_user_permissions;
       const canAdmin = profile.rol === 'ADMINISTRADOR' && ownPerms?.puede_administrar_usuarios === true;
       const canImport = profile.rol === 'ADMINISTRADOR' || ownPerms?.puede_crear === true || ownPerms?.puede_editar === true;
+      canEditOc=profile.rol === 'ADMINISTRADOR' || ownPerms?.puede_editar === true;
       adminBtn.hidden = !canAdmin;
       const importNav = $('#importNav');
       if (importNav) importNav.hidden = !canImport;
@@ -1456,7 +1478,14 @@ window.locadoresSupabaseClient=supabase;
           for(const st of statuses||[]){const key=String(st.numero_oc||'')+'|'+String(st.periodo||'');trackingStatusByOc.set(key,st)}
         }
       }catch(statusError){console.warn('No se pudieron cargar los estados de seguimiento',statusError);showMessage(searchMessage,'Las órdenes se cargaron, pero no fue posible consultar los estados del seguimiento.','error')}
-      renderResults(data || [], mode === 'year' ? 'Año ' + term : term);
+      const activeOcs=[];
+      for(const batch of Array.from({length:Math.ceil((data||[]).length/100)},(_,i)=>(data||[]).slice(i*100,(i+1)*100))){
+        const {data:ocStates,error:ocStateError}=await supabase.from('ordenes_compra').select('numero_oc,periodo,eliminado_logico').in('numero_oc',batch.map(x=>x.numero_oc));
+        if(ocStateError){showMessage(searchMessage,'No se pudo comprobar el estado de las OC.', 'error');return;}
+        const inactive=new Set((ocStates||[]).filter(x=>x.eliminado_logico).map(x=>x.numero_oc+'|'+x.periodo));
+        activeOcs.push(...batch.filter(x=>!inactive.has(x.numero_oc+'|'+x.periodo)));
+      }
+      renderResults(activeOcs, mode === 'year' ? 'Año ' + term : term);
     });
 
     function uniqueValues(key) {
@@ -1564,8 +1593,8 @@ window.locadoresSupabaseClient=supabase;
     }
 
     function renderResults(rows, term) {
-      allRows = rows;
-      visibleRows = rows;
+      allRows = rows.filter(r=>!r.eliminado_logico);
+      visibleRows = allRows;
       currentTerm = term;
       prepareFilters();
       resultsTools.hidden = false;
@@ -1636,7 +1665,7 @@ window.locadoresSupabaseClient=supabase;
       const rowHtml = (row) => {
         const exited = row.estado_oc === 'DESISTIÓ' || row.estado_oc === 'ANULADO';
         const index = visibleRows.indexOf(row);
-        return '<tr><td class="visual-row-number">'+(index+1)+'</td>'+rowCells(row)+'</tr>';
+        return '<tr><td class="visual-row-number">'+(index+1)+(canEditOc?' <button type="button" data-edit-index="'+index+'" title="Editar OC" aria-label="Editar OC" style="border:0;background:transparent;color:#1967d2;cursor:pointer">✎</button>':'')+'</td>'+rowCells(row)+'</tr>';
       };
 
       if (currentSearchMode === 'year' && viewMode.value !== 'list') {
@@ -1676,6 +1705,8 @@ window.locadoresSupabaseClient=supabase;
       detailGrid.innerHTML = items.filter(([label])=>allowedLabels.has(label)).map(([label,value]) =>
         '<div class="detail-item"><span>' + escapeHTML(label) + '</span><strong>' + escapeHTML(value ?? '—') + '</strong></div>'
       ).join('');
+      selectedOcRow=row;
+      $('#ocEditActions').hidden=!canEditOc;
       detailOverlay.hidden = false;
       document.body.style.overflow = 'hidden';
       $('#detailClose').focus();
@@ -1687,11 +1718,61 @@ window.locadoresSupabaseClient=supabase;
     }
 
     resultsBody.addEventListener('click', (event) => {
+      const editButton=event.target.closest('[data-edit-index]');
+      if(editButton){openOcEdit(visibleRows[Number(editButton.dataset.editIndex)]);return;}
       const button = event.target.closest('[data-detail-index]');
       if (!button) return;
       openDetail(visibleRows[Number(button.dataset.detailIndex)]);
     });
     $('#detailClose').addEventListener('click', closeDetail);
+    const ocEditOverlay=$('#ocEditOverlay'),ocEditForm=$('#ocEditForm'),ocEditMsg=$('#ocEditMessage');
+    function closeOcEdit(){ocEditOverlay.hidden=true;document.body.style.overflow='';}
+    function openOcEdit(row){
+      if(!canEditOc||!row)return;
+      selectedOcRow=row;closeDetail();
+      const values={nombre:row.apellidos_nombres,ruc:row.ruc,numero_oc:row.numero_oc,expediente:row.expediente,monto_total:row.monto_total,fecha_emision:row.fecha_emision,fecha_inicio:row.fecha_inicio,fecha_termino:row.fecha_termino,subgerencia:row.subgerencia,numero_entregables:row.numero_entregables,descripcion_pedido:row.descripcion_pedido};
+      for(const [k,v] of Object.entries(values)){const el=ocEditForm.elements.namedItem(k);if(el)el.value=v??'';}
+      $('#ocEditSubtitle').textContent='OC '+(row.numero_oc||'')+' · '+(row.periodo||'');
+      ocEditMsg.textContent='';ocEditOverlay.hidden=false;document.body.style.overflow='hidden';
+    }
+    $('#ocOpenEdit').addEventListener('click',()=>openOcEdit(selectedOcRow));
+    $('#ocEditClose').addEventListener('click',closeOcEdit);
+    $('#ocEditCancel').addEventListener('click',closeOcEdit);
+    ocEditOverlay.addEventListener('click',e=>{if(e.target===ocEditOverlay)closeOcEdit()});
+    async function ocReload(){closeOcEdit();searchBtn.click();}
+    ocEditForm.addEventListener('submit',async e=>{
+      e.preventDefault();if(!canEditOc||!selectedOcRow)return;
+      const form=new FormData(ocEditForm),v=k=>String(form.get(k)||'').trim();
+      const ruc=v('ruc'),numero=v('numero_oc'),inicio=v('fecha_inicio'),termino=v('fecha_termino');
+      if(!/^\\d{11}$/.test(ruc)||!/^\\d+$/.test(numero)||termino<inicio){ocEditMsg.textContent='Revisa el RUC (11 dígitos), número de OC y orden de fechas.';return;}
+      const old=selectedOcRow;
+      const nameChanged=v('nombre')!==String(old.apellidos_nombres||''),rucChanged=ruc!==String(old.ruc||'');
+      if((nameChanged||rucChanged)&&!confirm('Modificar el nombre o RUC afectará también otras órdenes del mismo locador. ¿Continuar?'))return;
+      const payload={numero_oc:numero,expediente:v('expediente'),monto_total:Number(v('monto_total')),fecha_emision:v('fecha_emision'),fecha_inicio:inicio,fecha_termino:termino,subgerencia:v('subgerencia')||null,numero_entregables:Number(v('numero_entregables')),descripcion_pedido:v('descripcion_pedido')};
+      ocEditMsg.textContent='Guardando...';
+      try{
+        const {data:oc,error:lookupError}=await supabase.from('ordenes_compra').select('id,locador_id').eq('numero_oc',old.numero_oc).eq('periodo',old.periodo).single();
+        if(lookupError)throw lookupError;
+        const {data:updated,error}=await supabase.from('ordenes_compra').update(payload).eq('id',oc.id).select('id').single();if(error)throw error;
+        if(nameChanged||rucChanged){const {error:locError}=await supabase.from('locadores').update({apellidos_nombres:v('nombre'),ruc}).eq('id',oc.locador_id);if(locError)throw Error('OC guardada, pero no se pudo actualizar el nombre/RUC: '+locError.message);}
+        await ocReload();
+      }catch(error){ocEditMsg.textContent='No se pudo completar: '+error.message;}
+    });
+    $('#ocSoftDelete').addEventListener('click',async()=>{
+      if(!canEditOc||!selectedOcRow)return;
+      const reason=prompt('Motivo obligatorio de la baja lógica de la CCP:');if(reason===null)return;
+      if(!reason.trim()){ocEditMsg.textContent='Debes indicar el motivo de la baja.';return;}
+      if(!confirm('¿Confirmas dar de baja la OC '+selectedOcRow.numero_oc+'? Se conservarán los datos y solo se ocultará de las consultas. Si existen movimientos, la operación será bloqueada.'))return;
+      ocEditMsg.textContent='Verificando movimientos...';
+      try{
+        const {data:oc,error}=await supabase.from('ordenes_compra').select('id').eq('numero_oc',selectedOcRow.numero_oc).eq('periodo',selectedOcRow.periodo).single();if(error)throw error;
+        const {count:movs,error:movError}=await supabase.from('historial_revisiones_pago').select('id',{count:'exact',head:true}).eq('orden_compra_id',oc.id);if(movError)throw movError;
+        if(movs>0){ocEditMsg.textContent='Baja bloqueada: la OC tiene '+movs+' movimiento(s) de revisión registrado(s).';return;}
+        const {error:deleteError}=await supabase.from('ordenes_compra').update({eliminado_logico:true,eliminado_en:new Date().toISOString(),eliminado_por:(await supabase.auth.getUser()).data.user?.id,motivo_eliminacion:reason.trim()}).eq('id',oc.id);
+        if(deleteError)throw deleteError;
+        await ocReload();
+      }catch(error){ocEditMsg.textContent='No se pudo dar de baja: '+error.message;}
+    });
     detailOverlay.addEventListener('click', (event) => { if (event.target === detailOverlay) closeDetail(); });
     document.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape') return;
