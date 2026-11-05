@@ -618,6 +618,24 @@ body.oc-expanded-active{overflow:hidden!important}
 #tableWrap.oc-expanded table :is(th,td):is([data-col-key="ver_credito"]){width:110px!important;min-width:110px!important;max-width:110px!important}
 #tableWrap.oc-expanded table th.tracking-state-col,#tableWrap.oc-expanded table td.tracking-state-cell{width:135px!important;min-width:135px!important;max-width:135px!important}
 #tableWrap.oc-expanded table th.visual-row-number,#tableWrap.oc-expanded table td.visual-row-number{width:34px!important;min-width:34px!important;max-width:34px!important}
+
+/* Ventanas de OC por encima de la vista ampliada (z-index 3000). */
+#detailOverlay{z-index:4100!important}
+#ocEditOverlay{z-index:4200!important}
+#ocEditOverlay .detail-card{width:min(760px,100%);max-height:92vh;overflow:auto}
+#ocEditOverlay #ocEditForm{padding:20px 24px 24px;gap:15px 18px!important}
+#ocEditOverlay #ocEditForm>label{display:flex;flex-direction:column;gap:6px;color:#52647d;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.035em}
+#ocEditOverlay #ocEditForm input,
+#ocEditOverlay #ocEditForm select,
+#ocEditOverlay #ocEditForm textarea{display:block;width:100%;min-height:42px;padding:10px 12px!important;border:1px solid #dbe3ee;border-radius:10px;background:#fff;color:#172033;font-family:inherit;font-size:.9rem;font-weight:500;letter-spacing:normal;text-transform:none;box-shadow:none;outline:none}
+#ocEditOverlay #ocEditForm textarea{min-height:80px;resize:vertical;line-height:1.5}
+#ocEditOverlay #ocEditForm input:focus,
+#ocEditOverlay #ocEditForm select:focus,
+#ocEditOverlay #ocEditForm textarea:focus{border-color:#1967d2;box-shadow:0 0 0 3px rgba(25,103,210,.12)}
+#ocEditOverlay #ocEditMessage:not(:empty){padding:10px 12px;border-radius:10px;background:#fff3f2;color:#a52a36;font-size:.83rem}
+#ocEditOverlay #ocSoftDelete{border:1px solid #f2ccd1;background:#fff6f7;color:#b42336!important;border-radius:10px}
+#ocEditOverlay #ocEditForm button{border-radius:10px}
+@media(max-width:600px){#ocEditOverlay{padding:10px}#ocEditOverlay #ocEditForm{grid-template-columns:1fr!important;padding:15px!important}#ocEditOverlay #ocEditForm>label{grid-column:1/-1!important}}
 </style>
 </head>
 <body class="login-sidebar-hidden">
