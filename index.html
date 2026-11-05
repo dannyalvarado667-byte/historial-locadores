@@ -1683,7 +1683,7 @@ window.locadoresSupabaseClient=supabase;
       const rowHtml = (row) => {
         const exited = row.estado_oc === 'DESISTIÓ' || row.estado_oc === 'ANULADO';
         const index = visibleRows.indexOf(row);
-        return '<tr><td class="visual-row-number">'+(index+1)+(canEditOc?' <button type="button" data-edit-index="'+index+'" title="Editar OC" aria-label="Editar OC" style="border:0;background:transparent;color:#1967d2;cursor:pointer">✎</button>':'')+'</td>'+rowCells(row)+'</tr>';
+        return '<tr><td class="visual-row-number">'+(index+1)+'</td>'+rowCells(row)+'</tr>';
       };
 
       if (currentSearchMode === 'year' && viewMode.value !== 'list') {
