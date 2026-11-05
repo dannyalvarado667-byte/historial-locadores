@@ -1727,10 +1727,12 @@ window.locadoresSupabaseClient=supabase;
     $('#detailClose').addEventListener('click', closeDetail);
     const ocEditOverlay=$('#ocEditOverlay'),ocEditForm=$('#ocEditForm'),ocEditMsg=$('#ocEditMessage');
     function closeOcEdit(){ocEditOverlay.hidden=true;document.body.style.overflow='';}
-    function openOcEdit(row){
+    async function openOcEdit(row){
       if(!canEditOc||!row)return;
       selectedOcRow=row;closeDetail();
-      const values={nombre:row.apellidos_nombres,ruc:row.ruc,numero_oc:row.numero_oc,expediente:row.expediente,monto_total:row.monto_total,fecha_emision:row.fecha_emision,fecha_inicio:row.fecha_inicio,fecha_termino:row.fecha_termino,subgerencia:row.subgerencia,numero_entregables:row.numero_entregables,descripcion_pedido:row.descripcion_pedido};
+      const {data:ocDetail,error:detailError}=await supabase.from('ordenes_compra').select('descripcion_pedido').eq('numero_oc',row.numero_oc).eq('periodo',row.periodo).maybeSingle();
+      if(detailError){alert('No se pudo cargar la descripción del servicio: '+detailError.message);return;}
+      const values={nombre:row.apellidos_nombres,ruc:row.ruc,numero_oc:row.numero_oc,expediente:row.expediente,monto_total:row.monto_total,fecha_emision:row.fecha_emision,fecha_inicio:row.fecha_inicio,fecha_termino:row.fecha_termino,subgerencia:row.subgerencia,numero_entregables:row.numero_entregables,descripcion_pedido:ocDetail?.descripcion_pedido};
       for(const [k,v] of Object.entries(values)){const el=ocEditForm.elements.namedItem(k);if(el)el.value=v??'';}
       $('#ocEditSubtitle').textContent='OC '+(row.numero_oc||'')+' · '+(row.periodo||'');
       ocEditMsg.textContent='';ocEditOverlay.hidden=false;document.body.style.overflow='hidden';
