@@ -1751,12 +1751,17 @@ window.locadoresSupabaseClient=supabase;
       const daysInclusive=(a,b)=>Math.round((Date.parse(b+'T00:00:00Z')-Date.parse(a+'T00:00:00Z'))/86400000)+1;
       const originalDays=daysInclusive(old.fecha_inicio,old.fecha_termino);
       const newDays=daysInclusive(inicio,termino);
-      if(newDays!==originalDays){
-        ocEditMsg.textContent='La OC tiene una duración contractual de '+originalDays+' días. Las fechas corregidas deben mantener exactamente '+originalDays+' días calendario (contando el inicio como día 1). La duración no se puede modificar desde esta ventana.';
+      const datesChanged=inicio!==old.fecha_inicio||termino!==old.fecha_termino;
+      if(datesChanged&&![25,30].includes(newDays)){
+        ocEditMsg.textContent='Fechas no válidas: solo se admiten periodos de 25 o 30 días calendario, contando la fecha inicial como día 1.';
         return;
       }
-      if(![25,30].includes(originalDays)&&old.periodo==='Octubre 2026'){
-        ocEditMsg.textContent='La CCP de octubre debe tener 25 o 30 días. Revisa la configuración antes de editar sus fechas.';
+      if(datesChanged&&![25,30].includes(originalDays)){
+        ocEditMsg.textContent='La duración original no es de 25 ni 30 días. No se pueden corregir las fechas hasta verificar la modalidad contractual de esta OC.';
+        return;
+      }
+      if(datesChanged&&newDays!==originalDays){
+        ocEditMsg.textContent='La OC está configurada para '+originalDays+' días y debe mantener ese mismo plazo. No se permite cambiar la modalidad de 25 a 30 días ni viceversa.';
         return;
       }
       const nameChanged=v('nombre')!==String(old.apellidos_nombres||''),rucChanged=ruc!==String(old.ruc||'');
