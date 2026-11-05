@@ -1774,7 +1774,7 @@ window.locadoresSupabaseClient=supabase;
       e.preventDefault();if(!canEditOc||!selectedOcRow)return;
       const form=new FormData(ocEditForm),v=k=>String(form.get(k)||'').trim();
       const ruc=v('ruc'),numero=v('numero_oc'),inicio=v('fecha_inicio'),termino=v('fecha_termino');
-      if(!/^\\d{11}$/.test(ruc)||!/^\\d+$/.test(numero)||termino<inicio){ocEditMsg.textContent='Revisa el RUC (11 dígitos), número de OC y orden de fechas.';return;}
+      if(!/^\d{11}$/.test(ruc)||!/^\d+$/.test(numero)||termino<inicio){ocEditMsg.textContent='Revisa el RUC (11 dígitos), número de OC y orden de fechas.';return;}
       const old=selectedOcRow;
       const daysInclusive=(a,b)=>Math.round((Date.parse(b+'T00:00:00Z')-Date.parse(a+'T00:00:00Z'))/86400000)+1;
       const originalDays=daysInclusive(old.fecha_inicio,old.fecha_termino);
