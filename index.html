@@ -1748,6 +1748,17 @@ window.locadoresSupabaseClient=supabase;
       const ruc=v('ruc'),numero=v('numero_oc'),inicio=v('fecha_inicio'),termino=v('fecha_termino');
       if(!/^\\d{11}$/.test(ruc)||!/^\\d+$/.test(numero)||termino<inicio){ocEditMsg.textContent='Revisa el RUC (11 dígitos), número de OC y orden de fechas.';return;}
       const old=selectedOcRow;
+      const daysInclusive=(a,b)=>Math.round((Date.parse(b+'T00:00:00Z')-Date.parse(a+'T00:00:00Z'))/86400000)+1;
+      const originalDays=daysInclusive(old.fecha_inicio,old.fecha_termino);
+      const newDays=daysInclusive(inicio,termino);
+      if(newDays!==originalDays){
+        ocEditMsg.textContent='La OC tiene una duración contractual de '+originalDays+' días. Las fechas corregidas deben mantener exactamente '+originalDays+' días calendario (contando el inicio como día 1). La duración no se puede modificar desde esta ventana.';
+        return;
+      }
+      if(![25,30].includes(originalDays)&&old.periodo==='Octubre 2026'){
+        ocEditMsg.textContent='La CCP de octubre debe tener 25 o 30 días. Revisa la configuración antes de editar sus fechas.';
+        return;
+      }
       const nameChanged=v('nombre')!==String(old.apellidos_nombres||''),rucChanged=ruc!==String(old.ruc||'');
       if((nameChanged||rucChanged)&&!confirm('Modificar el nombre o RUC afectará también otras órdenes del mismo locador. ¿Continuar?'))return;
       const payload={numero_oc:numero,expediente:v('expediente'),monto_total:Number(v('monto_total')),fecha_emision:v('fecha_emision'),fecha_inicio:inicio,fecha_termino:termino,subgerencia:v('subgerencia')||null,numero_entregables:Number(v('numero_entregables')),descripcion_pedido:v('descripcion_pedido')};
