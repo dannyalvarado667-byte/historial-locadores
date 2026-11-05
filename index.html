@@ -636,6 +636,8 @@ body.oc-expanded-active{overflow:hidden!important}
 #ocEditOverlay #ocSoftDelete{border:1px solid #f2ccd1;background:#fff6f7;color:#b42336!important;border-radius:10px}
 #ocEditOverlay #ocEditForm button{border-radius:10px}
 @media(max-width:600px){#ocEditOverlay{padding:10px}#ocEditOverlay #ocEditForm{grid-template-columns:1fr!important;padding:15px!important}#ocEditOverlay #ocEditForm>label{grid-column:1/-1!important}}
+
+.search-autocomplete-wrap{position:relative;flex:1;min-width:0}.search-autocomplete-wrap>.search-input{width:100%}.search-suggestions{position:absolute;z-index:800;top:calc(100% + 5px);left:0;right:0;max-height:300px;overflow-y:auto;background:#fff;border:1px solid #cbd9ed;border-radius:12px;box-shadow:0 15px 30px #17365d25;padding:5px}.search-suggestions[hidden]{display:none!important}.search-suggestion{display:block;width:100%;padding:10px 12px;border:0;border-radius:8px;background:transparent;color:#17365d;text-align:left;cursor:pointer;font:inherit}.search-suggestion:hover,.search-suggestion:focus{background:#eaf2ff;outline:none}.search-suggestion strong{display:block;font-size:13px}.search-suggestion small{display:block;color:#627086;margin-top:3px}
 </style>
 </head>
 <body class="login-sidebar-hidden">
@@ -723,7 +725,7 @@ body.oc-expanded-active{overflow:hidden!important}
         <form id="searchForm" class="search-card">
           <div class="search-row">
             <div class="search-select-wrap"><details class="search-select-menu" id="searchTypeMenu"><summary id="searchTypeSummary">Locador / RUC</summary><div class="search-select-options"><button type="button" data-search-type="locador" class="selected">Locador / RUC</button><button type="button" data-search-type="year">Año</button></div></details><select id="searchType" class="search-input" aria-label="Tipo de búsqueda" hidden><option value="locador">Locador / RUC</option><option value="year">Año</option></select></div>
-            <input id="searchInput" class="search-input" type="search" maxlength="80" placeholder="Ejemplo: Altamirano o 10456034280" aria-label="Nombre o RUC del locador">
+            <div class="search-autocomplete-wrap"><input id="searchInput" class="search-input" type="search" maxlength="80" placeholder="Ejemplo: Altamirano o 10456034280" aria-label="Nombre o RUC del locador" autocomplete="off" aria-autocomplete="list" aria-controls="searchSuggestions" aria-expanded="false"><div id="searchSuggestions" class="search-suggestions" role="listbox" hidden></div></div>
             <div class="search-select-wrap year-select-wrap"><details class="search-select-menu" id="yearSelectMenu"><summary id="yearSelectSummary">Selecciona un año</summary><div class="search-select-options"><button type="button" data-year="">Selecciona un año</button><button type="button" data-year="2026">2026</button><button type="button" data-year="2027">2027</button></div></details><select id="yearSelect" class="search-input" aria-label="Año de la orden de compra" hidden><option value="">Selecciona un año</option><option value="2026">2026</option><option value="2027">2027</option></select></div>
             <button id="searchBtn" class="btn btn-primary" type="submit">Buscar historial</button>
           </div>
@@ -1460,6 +1462,45 @@ window.locadoresSupabaseClient=supabase;
       }
     });
 
+    // Sugerencias en vivo, sin modificar registros ni ejecutar la búsqueda hasta elegir.
+    const searchSuggestions=$('#searchSuggestions');
+    let suggestionTimer=null,suggestionSeq=0,suggestionItems=[];
+    function hideSuggestions(){searchSuggestions.hidden=true;searchSuggestions.replaceChildren();searchInput.setAttribute('aria-expanded','false');}
+    function showSuggestions(items){
+      suggestionItems=items;searchSuggestions.replaceChildren();
+      for(const item of items){
+        const btn=document.createElement('button');btn.type='button';btn.className='search-suggestion';btn.setAttribute('role','option');
+        const name=document.createElement('strong');name.textContent=item.apellidos_nombres||'Sin nombre';
+        const ruc=document.createElement('small');ruc.textContent='RUC '+(item.ruc||'—');
+        btn.append(name,ruc);btn.addEventListener('click',()=>{searchInput.value=item.ruc||item.apellidos_nombres;hideSuggestions();searchForm.requestSubmit();});
+        searchSuggestions.append(btn);
+      }
+      searchSuggestions.hidden=!items.length;searchInput.setAttribute('aria-expanded',String(Boolean(items.length)));
+    }
+    searchInput.addEventListener('input',()=>{
+      clearTimeout(suggestionTimer);const seq=++suggestionSeq;hideSuggestions();
+      const term=searchInput.value.trim().replace(/\\s+/g,' ');
+      if(searchType.value!=='locador'||term.length<3)return;
+      suggestionTimer=setTimeout(async()=>{
+        try{
+          const safe=term.replace(/[%_,()]/g,'').trim();if(safe.length<3)return;
+          const q=supabase.from('locadores').select('id,apellidos_nombres,ruc').limit(10).order('apellidos_nombres');
+          const {data,error}=await ( /^\\d+$/.test(safe)?q.ilike('ruc',safe+'%'):q.ilike('apellidos_nombres','%'+safe+'%') );
+          if(seq!==suggestionSeq||searchType.value!=='locador')return;
+          if(error){hideSuggestions();return;}showSuggestions(data||[]);
+        }catch(_){if(seq===suggestionSeq)hideSuggestions();}
+      },250);
+    });
+    searchInput.addEventListener('keydown',e=>{
+      if(e.key==='Escape')hideSuggestions();
+      if(e.key==='ArrowDown'&&!searchSuggestions.hidden){e.preventDefault();searchSuggestions.querySelector('button')?.focus();}
+    });
+    searchSuggestions.addEventListener('keydown',e=>{
+      if(e.key==='Escape'){hideSuggestions();searchInput.focus();}
+      if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const buttons=[...searchSuggestions.querySelectorAll('button')];const i=buttons.indexOf(document.activeElement);(buttons[(i+(e.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length])?.focus();}
+    });
+    document.addEventListener('click',e=>{if(!e.target.closest('.search-autocomplete-wrap'))hideSuggestions();});
+    searchType.addEventListener('change',()=>{++suggestionSeq;clearTimeout(suggestionTimer);hideSuggestions();});
     searchForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       showMessage(searchMessage);
