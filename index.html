@@ -1752,13 +1752,22 @@ window.locadoresSupabaseClient=supabase;
       const originalDays=daysInclusive(old.fecha_inicio,old.fecha_termino);
       const newDays=daysInclusive(inicio,termino);
       const datesChanged=inicio!==old.fecha_inicio||termino!==old.fecha_termino;
-      if(datesChanged&&(!Number.isFinite(originalDays)||originalDays<=0)){
-        ocEditMsg.textContent='No se pudo determinar el plazo contractual de la OC. Verifica las fechas originales y la configuración de la CCP.';
-        return;
-      }
-      if(datesChanged&&newDays!==originalDays){
-        ocEditMsg.textContent='Esta OC tiene configurado un plazo de '+originalDays+' días calendario. Las nuevas fechas deben mantener exactamente '+originalDays+' días, contando el día de inicio como día 1.';
-        return;
+      const entregablesChanged=Number(v('numero_entregables'))!==Number(old.numero_entregables);
+      if(datesChanged||entregablesChanged){
+        const {data:modalidades,error:modalidadError}=await supabase.from('ccp_modalidades')
+          .select('duracion_dias,entregables').eq('periodo',old.periodo);
+        if(modalidadError){ocEditMsg.textContent='No se pudo consultar la configuración de la CCP: '+modalidadError.message;return;}
+        if(modalidades?.length){
+          const original=modalidades.find(m=>m.duracion_dias===originalDays&&Number(m.entregables)===Number(old.numero_entregables));
+          if(!original){ocEditMsg.textContent='La OC original no coincide con una modalidad configurada en esta CCP. Revisa Administración antes de corregirla.';return;}
+          if(newDays!==original.duracion_dias||Number(v('numero_entregables'))!==Number(original.entregables)){
+            ocEditMsg.textContent='Esta OC pertenece a la modalidad de '+original.duracion_dias+' días y '+original.entregables+' entregable(s). No puedes cambiar su modalidad desde la edición: da de baja la OC (si no tiene movimientos) y registra una nueva en la modalidad correspondiente.';
+            return;
+          }
+        }else if(newDays!==originalDays||entregablesChanged){
+          ocEditMsg.textContent='Esta CCP utiliza reglas históricas. La corrección debe conservar los '+originalDays+' días y '+old.numero_entregables+' entregable(s) de la OC.';
+          return;
+        }
       }
       const nameChanged=v('nombre')!==String(old.apellidos_nombres||''),rucChanged=ruc!==String(old.ruc||'');
       if((nameChanged||rucChanged)&&!confirm('Modificar el nombre o RUC afectará también otras órdenes del mismo locador. ¿Continuar?'))return;
