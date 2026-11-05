@@ -1054,6 +1054,9 @@ window.locadoresSupabaseClient=supabase;
     let allRows = [];
     let canEditOc=false;
     let selectedOcRow=null;
+    const editDeepLink=new URLSearchParams(location.search).get('editar_oc');
+    const editDeepRuc=new URLSearchParams(location.search).get('ruc');
+    let editDeepPending=Boolean(editDeepLink);
     let trackingStatusByOc = new Map();
     let visibleRows = [];
     let currentTerm = '';
@@ -1378,7 +1381,10 @@ window.locadoresSupabaseClient=supabase;
         refreshAccess(session).then(ok => {
           if (ok) {
             applyColumnVisibility();
-            setTimeout(() => searchInput.focus(), 60);
+            if(editDeepPending&&editDeepRuc&&/^\d{11}$/.test(editDeepRuc)){
+              searchType.value='locador';searchType.dispatchEvent(new Event('change'));searchInput.value=editDeepRuc;
+              searchForm.requestSubmit();
+            }else setTimeout(() => searchInput.focus(), 60);
           }
         });
       } else {
@@ -1514,6 +1520,13 @@ window.locadoresSupabaseClient=supabase;
         activeOcs.push(...batch.filter(x=>!inactive.has(x.numero_oc+'|'+x.periodo)));
       }
       renderResults(activeOcs, mode === 'year' ? 'Año ' + term : term);
+      if(editDeepPending){
+        const target=activeOcs.find(x=>String(x.numero_oc)===String(editDeepLink));
+        editDeepPending=false;
+        history.replaceState(null,'',location.pathname);
+        if(target&&canEditOc)openOcEdit(target);
+        else showMessage(searchMessage,'No se encontró la OC indicada o tu usuario no tiene permiso para editarla.','error');
+      }
     });
 
     function uniqueValues(key) {
