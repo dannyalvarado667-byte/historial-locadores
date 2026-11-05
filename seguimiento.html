@@ -20,8 +20,7 @@
 #detailEditForm .edit-buttons button{font-size:13px;padding:10px 16px;border-radius:10px}
 #detailEditForm .edit-buttons #editSave{background:#1967d2;border-color:#1967d2;box-shadow:0 2px 5px rgba(25,103,210,.15)}
 @media(max-width:620px){#detailEditForm:not([hidden]){grid-template-columns:1fr;padding:14px;gap:10px}#detailEditForm label,#detailEditForm .edit-date-field{grid-column:1/-1}.detail-box:has(#detailEditForm:not([hidden])) .detail-head{padding:14px}#detailEditForm #editSender,#detailEditForm #editSubject{min-height:72px}}
-#detailEditForm .edit-date-field{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}#detailEditForm .edit-date-field>label{font-size:11px;font-weight:800;color:#244b78;cursor:default}#detailEditForm #editDate{cursor:pointer;background-color:#fff;border:1.5px solid #9fb8d8;transition:border-color .15s,box-shadow .15s,background-color .15s}#detailEditForm #editDate:hover{border-color:#1967d2;background-color:#eef5ff;box-shadow:0 0 0 2px rgba(25,103,210,.08)}#detailEditForm #editDate:focus{outline:2px solid #1967d2;outline-offset:1px}#detailEditForm #editDate::-webkit-calendar-picker-indicator{cursor:pointer}#ocEditForm[hidden]{display:none!important}#ocEditForm{padding:18px 22px;background:#f8fbff}.oc-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.oc-edit-grid label{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:800;color:#244b78}.oc-edit-grid input{width:100%;min-width:0;border:1px solid #cbd9e9;border-radius:9px;padding:10px;background:white;font-size:13px;color:#172033}.oc-edit-grid input[type=date]{cursor:pointer}.oc-edit-note{font-size:11px;color:#62758b;line-height:1.5}#ocEditError{color:#bd2339;font-size:12px;margin:8px 0}#ocEditForm .edit-buttons{padding-top:12px;border-top:1px solid #dbe5f1}@media(max-width:600px){.oc-edit-grid{grid-template-columns:1fr}} 
-/* Fichas de detalle: diseño institucional coherente con los módulos principales */
+#detailEditForm .edit-date-field{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}#detailEditForm .edit-date-field>label{font-size:11px;font-weight:800;color:#244b78;cursor:default}#detailEditForm #editDate{cursor:pointer;background-color:#fff;border:1.5px solid #9fb8d8;transition:border-color .15s,box-shadow .15s,background-color .15s}#detailEditForm #editDate:hover{border-color:#1967d2;background-color:#eef5ff;box-shadow:0 0 0 2px rgba(25,103,210,.08)}#detailEditForm #editDate:focus{outline:2px solid #1967d2;outline-offset:1px}#detailEditForm #editDate::-webkit-calendar-picker-indicator{cursor:pointer}/* Fichas de detalle: diseño institucional coherente con los módulos principales */
 .detail-modal{background:rgba(10,31,57,.64);backdrop-filter:blur(3px)}
 .detail-box{width:min(700px,calc(100vw - 24px));border:1px solid #c9d9e9;border-radius:18px;overflow:auto;background:#f8fbff;box-shadow:0 24px 72px rgba(9,37,69,.30)}
 .detail-head{padding:18px 22px;background:#1b416f;border-bottom:3px solid #087f8c;align-items:center}
@@ -61,10 +60,6 @@
 .detail-modal.movement-theme #detailEditForm .edit-buttons #editSave{background:#087e88;border-color:#087e88;box-shadow:0 2px 6px rgba(8,126,136,.22)}
 .detail-modal.movement-theme #detailEditForm .edit-buttons #editSave:hover{background:#066a73}
 .detail-modal.movement-theme #detailEditForm .edit-date-field>label{color:#086c78}
-
-/* Selección de áreas y calendarios en edición de órdenes de compra */
-#ocEditArea{width:100%;min-height:40px;border:1px solid #cbd9e9;border-radius:9px;padding:9px 32px 9px 11px;background:#fff;color:#172033;font:inherit;cursor:pointer}
-
 
 /* Tipografía homogénea y campos multilínea en Registrar Atención */
 .regform input,.regform select,.regform textarea{font-family:inherit;font-size:14px;font-weight:400;line-height:1.4;color:var(--ink)}
