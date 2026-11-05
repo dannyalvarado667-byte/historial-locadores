@@ -621,7 +621,7 @@ body.oc-expanded-active{overflow:hidden!important}
 
 /* Ventanas de OC por encima de la vista ampliada (z-index 3000). */
 #detailOverlay{z-index:4100!important}
-#ocEditOverlay{z-index:4200!important}
+#ocEditOverlay{z-index:4200!important}\n#ocBajaOverlay{z-index:4300!important}\n#ocBajaMotivo:focus{outline:none;border-color:#1967d2!important;box-shadow:0 0 0 3px rgba(25,103,210,.12)}
 #ocEditOverlay .detail-card{width:min(760px,100%);max-height:92vh;overflow:auto}
 #ocEditOverlay #ocEditForm{padding:20px 24px 24px;gap:15px 18px!important}
 #ocEditOverlay #ocEditForm>label{display:flex;flex-direction:column;gap:6px;color:#52647d;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.035em}
@@ -845,7 +845,17 @@ body.oc-expanded-active{overflow:hidden!important}
 <label style="grid-column:1/-1">Descripción del servicio <textarea name="descripcion_pedido" rows="3" style="width:100%;padding:9px"></textarea></label>
 <p style="grid-column:1/-1;font-size:12px;color:#64748b;margin:0">Los cambios de nombre o RUC afectan el registro maestro del locador y podrían reflejarse en otras OC. Los cambios de fechas o entregables pueden requerir revisar el seguimiento.</p>
 <div id="ocEditMessage" role="status" style="grid-column:1/-1"></div>
-<div style="grid-column:1/-1;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><button id="ocSoftDelete" type="button" class="btn" style="color:#b42336">Dar de baja CCP</button><div style="display:flex;gap:8px"><button id="ocEditCancel" type="button" class="btn">Cancelar</button><button type="submit" class="btn btn-primary">Guardar cambios</button></div></div>
+<div style="grid-column:1/-1;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><button id="ocSoftDelete" type="button" class="btn" style="color:#b42336">Dar de baja OC</button><div style="display:flex;gap:8px"><button id="ocEditCancel" type="button" class="btn">Cancelar</button><button type="submit" class="btn btn-primary">Guardar cambios</button></div></div>
+</form></section></div>
+<div id="ocBajaOverlay" class="detail-overlay" hidden>
+<section class="detail-card" role="dialog" aria-modal="true" aria-labelledby="ocBajaTitle" style="width:min(510px,100%)">
+<div class="detail-head"><div><h2 id="ocBajaTitle">Dar de baja orden de compra</h2><p id="ocBajaSubtitle"></p></div><button id="ocBajaClose" class="detail-close" type="button" aria-label="Cerrar">×</button></div>
+<form id="ocBajaForm" style="padding:22px 24px 24px;display:grid;gap:14px">
+<p style="margin:0;color:#52647d;font-size:.88rem;line-height:1.5">Esta acción dará de baja únicamente la OC seleccionada, no toda la CCP. Los datos se conservarán. Si tiene movimientos registrados, la operación será bloqueada.</p>
+<label for="ocBajaMotivo" style="font-size:.78rem;font-weight:800;color:#52647d">Motivo de la baja <span style="color:#b42336">*</span></label>
+<textarea id="ocBajaMotivo" required minlength="5" maxlength="1000" rows="4" placeholder="Describe por qué corresponde dar de baja esta OC..." style="width:100%;padding:12px;border:1px solid #dbe3ee;border-radius:10px;font:inherit;resize:vertical"></textarea>
+<p id="ocBajaMessage" role="alert" style="margin:0;color:#b42336;font-size:.85rem" hidden></p>
+<div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap"><button id="ocBajaCancel" type="button" class="btn">Cancelar</button><button id="ocBajaConfirm" type="submit" class="btn" style="background:#b42336;color:#fff;border-radius:10px">Confirmar baja</button></div>
 </form></section></div>
 <div id="columnsOverlay" class="detail-overlay" hidden>
       <section class="detail-card columns-card" role="dialog" aria-modal="true" aria-labelledby="columnsTitle">
@@ -1799,20 +1809,32 @@ window.locadoresSupabaseClient=supabase;
         await ocReload();
       }catch(error){ocEditMsg.textContent='No se pudo completar: '+error.message;}
     });
-    $('#ocSoftDelete').addEventListener('click',async()=>{
+    const ocBajaOverlay=$('#ocBajaOverlay'),ocBajaForm=$('#ocBajaForm'),ocBajaMsg=$('#ocBajaMessage');
+    function closeOcBaja(){ocBajaOverlay.hidden=true;ocBajaMsg.hidden=true;ocBajaMsg.textContent='';}
+    $('#ocSoftDelete').addEventListener('click',()=>{
       if(!canEditOc||!selectedOcRow)return;
-      const reason=prompt('Motivo obligatorio de la baja lógica de la CCP:');if(reason===null)return;
-      if(!reason.trim()){ocEditMsg.textContent='Debes indicar el motivo de la baja.';return;}
-      if(!confirm('¿Confirmas dar de baja la OC '+selectedOcRow.numero_oc+'? Se conservarán los datos y solo se ocultará de las consultas. Si existen movimientos, la operación será bloqueada.'))return;
-      ocEditMsg.textContent='Verificando movimientos...';
+      $('#ocBajaSubtitle').textContent='OC N.° '+selectedOcRow.numero_oc+' · '+selectedOcRow.periodo;
+      $('#ocBajaMotivo').value='';ocBajaMsg.hidden=true;ocBajaMsg.textContent='';
+      ocBajaOverlay.hidden=false;$('#ocBajaMotivo').focus();
+    });
+    $('#ocBajaClose').addEventListener('click',closeOcBaja);
+    $('#ocBajaCancel').addEventListener('click',closeOcBaja);
+    ocBajaOverlay.addEventListener('click',e=>{if(e.target===ocBajaOverlay)closeOcBaja()});
+    ocBajaForm.addEventListener('submit',async e=>{
+      e.preventDefault();if(!canEditOc||!selectedOcRow)return;
+      const reason=$('#ocBajaMotivo').value.trim();
+      if(reason.length<5){ocBajaMsg.textContent='Escribe un motivo de al menos 5 caracteres.';ocBajaMsg.hidden=false;return;}
+      const submit=$('#ocBajaConfirm');submit.disabled=true;submit.textContent='Verificando...';
+      ocBajaMsg.hidden=true;
       try{
         const {data:oc,error}=await supabase.from('ordenes_compra').select('id').eq('numero_oc',selectedOcRow.numero_oc).eq('periodo',selectedOcRow.periodo).single();if(error)throw error;
         const {count:movs,error:movError}=await supabase.from('historial_revisiones_pago').select('id',{count:'exact',head:true}).eq('orden_compra_id',oc.id);if(movError)throw movError;
-        if(movs>0){ocEditMsg.textContent='Baja bloqueada: la OC tiene '+movs+' movimiento(s) de revisión registrado(s).';return;}
-        const {error:deleteError}=await supabase.from('ordenes_compra').update({eliminado_logico:true,eliminado_en:new Date().toISOString(),eliminado_por:(await supabase.auth.getUser()).data.user?.id,motivo_eliminacion:reason.trim()}).eq('id',oc.id);
+        if(movs>0)throw Error('Baja bloqueada: la OC tiene '+movs+' movimiento(s) de revisión registrado(s).');
+        const {error:deleteError}=await supabase.from('ordenes_compra').update({eliminado_logico:true,eliminado_en:new Date().toISOString(),eliminado_por:(await supabase.auth.getUser()).data.user?.id,motivo_eliminacion:reason}).eq('id',oc.id);
         if(deleteError)throw deleteError;
-        await ocReload();
-      }catch(error){ocEditMsg.textContent='No se pudo dar de baja: '+error.message;}
+        closeOcBaja();await ocReload();
+      }catch(error){ocBajaMsg.textContent='No se pudo dar de baja: '+error.message;ocBajaMsg.hidden=false;}
+      finally{submit.disabled=false;submit.textContent='Confirmar baja';}
     });
     detailOverlay.addEventListener('click', (event) => { if (event.target === detailOverlay) closeDetail(); });
     document.addEventListener('keydown', (event) => {
