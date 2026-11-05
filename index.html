@@ -1752,16 +1752,12 @@ window.locadoresSupabaseClient=supabase;
       const originalDays=daysInclusive(old.fecha_inicio,old.fecha_termino);
       const newDays=daysInclusive(inicio,termino);
       const datesChanged=inicio!==old.fecha_inicio||termino!==old.fecha_termino;
-      if(datesChanged&&![25,30].includes(newDays)){
-        ocEditMsg.textContent='Fechas no válidas: solo se admiten periodos de 25 o 30 días calendario, contando la fecha inicial como día 1.';
-        return;
-      }
-      if(datesChanged&&![25,30].includes(originalDays)){
-        ocEditMsg.textContent='La duración original no es de 25 ni 30 días. No se pueden corregir las fechas hasta verificar la modalidad contractual de esta OC.';
+      if(datesChanged&&(!Number.isFinite(originalDays)||originalDays<=0)){
+        ocEditMsg.textContent='No se pudo determinar el plazo contractual de la OC. Verifica las fechas originales y la configuración de la CCP.';
         return;
       }
       if(datesChanged&&newDays!==originalDays){
-        ocEditMsg.textContent='La OC está configurada para '+originalDays+' días y debe mantener ese mismo plazo. No se permite cambiar la modalidad de 25 a 30 días ni viceversa.';
+        ocEditMsg.textContent='Esta OC tiene configurado un plazo de '+originalDays+' días calendario. Las nuevas fechas deben mantener exactamente '+originalDays+' días, contando el día de inicio como día 1.';
         return;
       }
       const nameChanged=v('nombre')!==String(old.apellidos_nombres||''),rucChanged=ruc!==String(old.ruc||'');
