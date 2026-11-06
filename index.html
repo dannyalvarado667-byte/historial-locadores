@@ -638,6 +638,8 @@ body.oc-expanded-active{overflow:hidden!important}
 @media(max-width:600px){#ocEditOverlay{padding:10px}#ocEditOverlay #ocEditForm{grid-template-columns:1fr!important;padding:15px!important}#ocEditOverlay #ocEditForm>label{grid-column:1/-1!important}}
 
 .search-autocomplete-wrap{position:relative;flex:1;min-width:0}.search-autocomplete-wrap:has(#searchInput[hidden]){display:none!important}.search-autocomplete-wrap>.search-input{width:100%}.search-suggestions{position:absolute;z-index:800;top:calc(100% + 5px);left:0;right:0;max-height:300px;overflow-y:auto;background:#fff;border:1px solid #cbd9ed;border-radius:12px;box-shadow:0 15px 30px #17365d25;padding:5px}.search-suggestions[hidden]{display:none!important}.search-suggestion{display:block;width:100%;padding:10px 12px;border:0;border-radius:8px;background:transparent;color:#17365d;text-align:left;cursor:pointer;font:inherit}.search-suggestion:hover,.search-suggestion:focus{background:#eaf2ff;outline:none}.search-suggestion strong{display:block;font-size:13px}.search-suggestion small{display:block;color:#627086;margin-top:3px}
+
+@media(min-width:651px){.search-row{grid-template-columns:minmax(145px,1fr) minmax(0,2fr)!important}.search-row>.search-select-wrap.year-select-wrap{grid-column:2}.search-row>.btn-primary{grid-column:1/-1!important}}
 </style>
 </head>
 <body class="login-sidebar-hidden">
@@ -1446,11 +1448,15 @@ window.locadoresSupabaseClient=supabase;
       yearSelect.value = '';
       showMessage(searchMessage);
       if (searchType.value === 'year') {
+        searchInput.closest('.search-autocomplete-wrap').style.display='none';
+        document.querySelector('.year-select-wrap').style.display='block';
         searchInput.hidden = true;
         yearSelect.hidden = false;
         searchHelp.textContent = 'Selecciona el año que deseas consultar.';
         document.getElementById('yearSelectSummary').focus();
       } else {
+        document.querySelector('.year-select-wrap').style.display='none';
+        searchInput.closest('.search-autocomplete-wrap').style.display='block';
         yearSelect.hidden = true;
         searchInput.hidden = false;
         searchInput.placeholder = 'Ejemplo: Altamirano o 10456034280';
