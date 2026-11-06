@@ -598,7 +598,7 @@ let draftUserId=null,draftActiveId=null,draftBusy=false,draftTimer=null,draftGen
 const draftFields=['regOc','regDate','regPresentation','regEnt','regState','regSender','regSubject','regObs'];
 function draftSnapshot(){const d={};for(const id of draftFields)d[id]=$('#'+id)?.value||'';return d}
 function draftSetStatus(msg){const el=$('#draftSaveStatus');if(el)el.textContent=msg}
-function draftOc(){const o=resolveReg();return o?.orden_compra_id||null}
+function draftOc(){if(selectedRegOcId!=null)return selectedRegOcId;const o=resolveReg();return o?.orden_compra_id||null}
 async function draftListRefresh(){
  if(!draftUserId)return;
  const {data,error}=await db.from('proyectos_pago').select('id,orden_compra_id,datos,titulo,actualizado_en').eq('usuario_id',draftUserId).eq('estado','BORRADOR').order('actualizado_en',{ascending:false}).limit(100);
@@ -612,16 +612,16 @@ async function draftPersist(manual=false){
  const oc=draftOc();if(!oc){if(manual)await styledMessage('Selecciona una OC concreta antes de guardar el proyecto.');return}
  const datos=draftSnapshot(),signature=JSON.stringify([oc,datos]);
  if(!manual&&signature===draftLastSignature)return;
- const generation=draftGeneration;draftBusy=true;draftSetStatus('Guardando proyecto…');
+ const generation=draftGeneration;let didSave=false;draftBusy=true;draftSetStatus('Guardando proyecto…');
  try{
   const row=(window.trackingRows||[]).find(x=>String(x.orden_compra_id)===String(oc));
   const titulo=(row?.ordenes_compra?.locadores?.apellidos_nombres||'OC')+' · OC '+(row?.ordenes_compra?.numero_oc||oc);
   const payload={usuario_id:draftUserId,orden_compra_id:oc,datos,titulo,estado:'BORRADOR',actualizado_en:new Date().toISOString()};
   const {data,error}=await db.from('proyectos_pago').upsert(payload,{onConflict:'usuario_id,orden_compra_id'}).select('id').single();
   if(error)throw error;
-  if(generation===draftGeneration){draftActiveId=data.id;draftLastSignature=signature;draftSetStatus('✓ Proyecto guardado · '+new Date().toLocaleTimeString('es-PE'));await draftListRefresh()}
+  if(generation===draftGeneration){draftActiveId=data.id;draftLastSignature=signature;didSave=true;draftSetStatus('✓ Proyecto guardado · '+new Date().toLocaleTimeString('es-PE'));await draftListRefresh()}
  }catch(e){draftSetStatus('⚠ No se pudo guardar el proyecto: '+e.message);if(manual)await styledMessage('No se pudo guardar el proyecto: '+e.message)}
- finally{draftBusy=false;if(generation===draftGeneration&&draftReady&&JSON.stringify([draftOc(),draftSnapshot()])!==draftLastSignature)draftSchedule()}
+ finally{draftBusy=false;if(didSave&&generation===draftGeneration&&draftReady&&JSON.stringify([draftOc(),draftSnapshot()])!==draftLastSignature)draftSchedule()}
 }
 function draftSchedule(){if(!draftReady)return;clearTimeout(draftTimer);draftTimer=setTimeout(()=>draftPersist(false),1100)}
 async function draftOpen(id){
