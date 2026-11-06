@@ -673,11 +673,11 @@ async function draftPersist(manual=false){
  }catch(e){draftSetStatus('⚠ No se pudo guardar el proyecto: '+e.message);if(manual)await styledMessage('No se pudo guardar el proyecto: '+e.message)}
  finally{draftBusy=false;if(didSave&&generation===draftGeneration&&draftReady&&JSON.stringify([draftOc(),draftSnapshot()])!==draftLastSignature)draftSchedule()}
 }
-function draftSchedule(){if(!draftReady)return;clearTimeout(draftTimer);draftTimer=setTimeout(()=>draftPersist(false),1100)}
+function draftSchedule(){/* Guardado exclusivamente manual. */}
 async function draftOpen(id){
  const x=(window.paymentDraftItems||[]).find(v=>String(v.id)===String(id));if(!x)return;
  if(draftTimer)clearTimeout(draftTimer);
- if(draftActiveId&&draftLastSignature!==JSON.stringify([draftOc(),draftSnapshot()])){await draftPersist(true)}
+ /* No guardar automáticamente al cambiar de proyecto. */
  draftGeneration++;draftReady=false;draftActiveId=x.id;
  const data=x.datos||{},oc=(window.trackingRows||[]).find(t=>String(t.orden_compra_id)===String(x.orden_compra_id));
  if(!oc){draftSetStatus('Esta OC ya no está disponible en el seguimiento.');draftReady=true;return}
@@ -727,7 +727,7 @@ async function initPaymentDrafts(){
  $('#draftSave').onclick=()=>{clearTimeout(draftTimer);draftPersist(true)};
  $('#draftListToggle').onclick=async()=>{await draftListRefresh();$('#draftList').hidden=!$('#draftList').hidden};
  $('#draftList').onclick=e=>{const open=e.target.closest('[data-draft-open]'),del=e.target.closest('[data-draft-delete]');if(open)draftOpen(open.dataset.draftOpen);if(del)draftDiscard(del.dataset.draftDelete)};
- for(const id of draftFields){$('#'+id)?.addEventListener('input',draftSchedule);$('#'+id)?.addEventListener('change',draftSchedule)}
+ /* Sin escuchas de autoguardado: solo el botón Guardar como proyecto persiste datos. */
  await draftListRefresh();draftReady=true;
 }
 function clearMovementForm(message='Formulario limpio. Escribe nombre, RUC u OC para identificar al locador.'){
