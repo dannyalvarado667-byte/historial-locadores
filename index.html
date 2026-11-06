@@ -851,6 +851,12 @@ body.oc-expanded-active{overflow:hidden!important}
 <div id="ocEditMessage" role="status" style="grid-column:1/-1"></div>
 <div style="grid-column:1/-1;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><button id="ocSoftDelete" type="button" class="btn" style="color:#b42336">Dar de baja OC</button><div style="display:flex;gap:8px"><button id="ocEditCancel" type="button" class="btn">Cancelar</button><button type="submit" class="btn btn-primary">Guardar cambios</button></div></div>
 </form></section></div>
+<div id="ocMasterConfirmOverlay" class="detail-overlay" hidden style="z-index:4600!important">
+<section class="detail-card" role="dialog" aria-modal="true" aria-labelledby="ocMasterConfirmTitle" style="width:min(490px,100%);overflow:hidden;border-radius:17px">
+<div class="detail-head" style="background:#193e70;color:#fff;display:flex;align-items:center;gap:12px"><span style="display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:#e4f5f2;color:#087f85;font-size:21px;font-weight:900">!</span><div style="flex:1"><h2 id="ocMasterConfirmTitle" style="margin:0;color:#fff">Confirmar modificación</h2></div><button type="button" id="ocMasterConfirmClose" class="detail-close" aria-label="Cerrar">×</button></div>
+<div style="padding:24px 24px 12px;color:#193e70;line-height:1.6;font-size:15px">Estás modificando el <strong>nombre o RUC del locador</strong>.<p style="margin:12px 0 0;color:#536981;font-size:13px">Este cambio también se reflejará en las demás órdenes de compra vinculadas al mismo locador. ¿Deseas continuar?</p></div>
+<div style="display:flex;justify-content:flex-end;gap:10px;padding:14px 24px 24px;flex-wrap:wrap"><button type="button" id="ocMasterConfirmCancel" class="btn">Cancelar</button><button type="button" id="ocMasterConfirmAccept" class="btn btn-primary">Sí, continuar</button></div>
+</section></div>
 <div id="ocBajaOverlay" class="detail-overlay" hidden>
 <section class="detail-card" role="dialog" aria-modal="true" aria-labelledby="ocBajaTitle" style="width:min(510px,100%)">
 <div class="detail-head"><div><h2 id="ocBajaTitle">Dar de baja orden de compra</h2><p id="ocBajaSubtitle"></p></div><button id="ocBajaClose" class="detail-close" type="button" aria-label="Cerrar">×</button></div>
@@ -1857,8 +1863,22 @@ window.locadoresSupabaseClient=supabase;
           return;
         }
       }
+      async function confirmOcMasterChange(){
+        const overlay=document.getElementById('ocMasterConfirmOverlay');
+        return new Promise(resolve=>{
+          const previous=document.activeElement;
+          overlay.hidden=false;
+          const cancel=document.getElementById('ocMasterConfirmCancel');
+          const accept=document.getElementById('ocMasterConfirmAccept');
+          const close=document.getElementById('ocMasterConfirmClose');
+          function finish(result){overlay.hidden=true;cancel.removeEventListener('click',onCancel);accept.removeEventListener('click',onAccept);close.removeEventListener('click',onCancel);overlay.removeEventListener('click',onBackdrop);document.removeEventListener('keydown',onKey);previous?.focus?.();resolve(result)}
+          const onCancel=()=>finish(false),onAccept=()=>finish(true),onBackdrop=e=>{if(e.target===overlay)finish(false)},onKey=e=>{if(e.key==='Escape'){e.preventDefault();finish(false)}};
+          cancel.addEventListener('click',onCancel);accept.addEventListener('click',onAccept);close.addEventListener('click',onCancel);overlay.addEventListener('click',onBackdrop);document.addEventListener('keydown',onKey);
+          cancel.focus();
+        });
+      }
       const nameChanged=v('nombre')!==String(old.apellidos_nombres||''),rucChanged=ruc!==String(old.ruc||'');
-      if((nameChanged||rucChanged)&&!confirm('Modificar el nombre o RUC afectará también otras órdenes del mismo locador. ¿Continuar?'))return;
+      if((nameChanged||rucChanged)&&!await confirmOcMasterChange())return;
       const payload={numero_oc:numero,expediente:v('expediente'),monto_total:Number(v('monto_total')),fecha_emision:v('fecha_emision'),fecha_inicio:inicio,fecha_termino:termino,subgerencia:v('subgerencia')||null,numero_entregables:Number(v('numero_entregables')),descripcion_pedido:v('descripcion_pedido')};
       ocEditMsg.textContent='Guardando...';
       try{
