@@ -502,6 +502,22 @@ header #userEmail,header #sessionUser{display:none!important}
 #draftList .draft-project-delete{background:#fff;color:#b42334;border:1px solid #e8a7af}
 #draftList .draft-project-delete:hover{background:#fff1f2}
 @media(max-width:560px){#draftList .draft-project-actions{width:100%}#draftList .draft-project-actions button{flex:1}}
+
+/* Confirmación institucional para descartar proyectos */
+#draftConfirmOverlay[hidden]{display:none!important}
+#draftConfirmOverlay{position:fixed;inset:0;z-index:1000001;background:rgba(14,33,57,.55);display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(2px)}
+.draft-confirm-card{width:min(460px,100%);overflow:hidden;background:#fff;border-radius:16px;box-shadow:0 24px 65px rgba(8,31,61,.3);color:#183b64}
+.draft-confirm-head{display:flex;align-items:center;gap:12px;padding:18px 22px;background:#193e70;color:#fff;font-size:16px}
+.draft-confirm-symbol{display:grid;place-items:center;flex:0 0 30px;height:30px;background:#e8f6f3;color:#087e83;border-radius:50%;font-weight:900;font-size:19px}
+.draft-confirm-x{margin-left:auto;border:0;background:rgba(255,255,255,.13);color:#fff;border-radius:8px;font-size:22px;cursor:pointer;padding:2px 10px}
+.draft-confirm-body{padding:24px 23px 12px;font-size:15px;line-height:1.55}
+.draft-confirm-body p{font-size:13px;color:#536a82;margin:12px 0 5px}
+.draft-confirm-body strong{color:#173b65}
+.draft-confirm-actions{display:flex;justify-content:flex-end;gap:10px;padding:14px 23px 23px;flex-wrap:wrap}
+.draft-confirm-actions button{border-radius:9px;padding:11px 16px;min-height:42px;font-size:13px;font-weight:800;cursor:pointer}
+.draft-confirm-cancel{background:#fff;color:#173b65;border:1px solid #bdd1e7}
+.draft-confirm-accept{background:#bb2637;color:#fff;border:1px solid #bb2637}
+.draft-confirm-accept:hover{background:#9d1d2d}
 </style><script>function ordenarPeriodosCCP(a,b){const meses={enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,setiembre:9,septiembre:9,octubre:10,noviembre:11,diciembre:12};const clave=v=>{const t=String(v||'').toLowerCase(),anio=Number((t.match(/20\d{2}/)||['0'])[0]);const encontrados=Object.entries(meses).filter(([m])=>t.includes(m)).map(([,n])=>n);return anio*100+(encontrados.length?Math.min(...encontrados):0)};return clave(a)-clave(b)||String(a).localeCompare(String(b),'es',{numeric:true})}</script></head><body><header class="top"><div class="brand"><a class="unified-logo" href="index.html" aria-label="Inicio">OC</a><div class="unified-brand-text"><strong>Historial de Locadores</strong><span>Gestión de órdenes de compra · GCTIC</span></div></div><nav class="nav"><a href="index.html" title="Órdenes de Compra">Órdenes de Compra</a><a href="seguimiento.html" title="Seguimiento" class="active">Seguimiento</a><a href="reportes.html" title="Reportes" class="unified-reports-link">▤ Reportes</a><a href="admin.html" title="Administración" class="unified-admin-link">Administración</a><a id="adminNav" href="admin.html" hidden style="display:none">Administración</a><button id="logout">Salir</button></nav><div class="header-profile" aria-label="Usuario conectado"><span class="header-profile-avatar">U</span><span class="header-profile-info"><strong>Mi cuenta</strong><small>Sesión activa</small></span><span class="header-profile-chevron">⌄</span></div></header><aside id="appSidebar" class="app-sidebar" aria-label="Menú principal"><div class="side-label">MENÚ PRINCIPAL</div><a href="index.html" title="Órdenes de Compra" class=""><span class="ui-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M8 4v16M12 14h5"/></svg></span><span>Órdenes de Compra</span></a><a href="seguimiento.html" class="selected"><span class="ui-icon"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 16V9m6 7V5m6 11v-4"/><circle cx="6" cy="7" r="1"/><circle cx="12" cy="3" r="1"/><circle cx="18" cy="10" r="1"/></svg></span><span>Seguimiento</span></a><a href="reportes.html" title="Reportes"><span class="ui-icon"><svg viewBox="0 0 24 24"><path d="M7 3h8l4 4v14H5V3h2zM15 3v5h4M8 12h8M8 16h8"/></svg></span><span>Reportes</span></a><a href="admin.html" class=""><span class="ui-icon"><svg viewBox="0 0 24 24"><path d="M12 3l2 2 3-.3.8 2.9 2.5 1.5-1.1 2.9 1.1 2.9-2.5 1.5-.8 2.9-3-.3-2 2-2-2-3 .3-.8-2.9-2.5-1.5L4.8 12 3.7 9.1l2.5-1.5L7 4.7l3 .3z"/><circle cx="12" cy="12" r="3"/></svg></span><span>Administración</span></a><div class="side-bottom"><button type="button" id="sidebarLogout" title="Cerrar sesión" aria-label="Cerrar sesión"><span class="ui-icon"><svg viewBox="0 0 24 24"><path d="M10 4H5v16h5M14 8l4 4-4 4M8 12h10"/></svg></span><span>Salir</span></button></div></aside>
 <main><section class="head"><div><h1>Seguimiento de pagos</h1><p>Consulta cada atención realizada y recupera rápidamente los antecedentes de un locador, diferenciados por CCP.</p></div><div class="metric metric-ccp"><span id="totalLabel">CCP seleccionada</span><div class="metric-pair"><div><strong id="totalOcMetric">—</strong><small>Órdenes de compra</small></div><div><strong id="total">—</strong><small>Movimientos diarios</small></div></div></div></section><section class="search" hidden><div class="field"><label>Locador, RUC u OC</label><input id="q" placeholder="Ej. Medina Palomino, 10709083762 o 4505522339"></div><div class="field"><label>CCP / Crédito presupuestal</label><select id="ccp"><option value="">Todas</option></select></div><div class="field"><label>Área</label><select id="area"><option value="">Todas</option></select></div><div class="field"><label>Estado del trámite</label><select id="estado"><option value="">Todos</option></select></div><button class="go" id="buscar">Buscar</button></section><section class="workbench">
 <div class="panel panel-alerts"><div class="panel-banner"><h2>◷ Alertas de Entregables <span id="alertCcpTitle"></span></h2><p class="hint">Control diario de presentación, vencimientos y penalidades</p></div><div class="panel-content"><div class="alert-category-grid">
@@ -674,8 +690,23 @@ async function draftOpen(id){
  $('#draftList').hidden=true;draftSetStatus('✓ Proyecto recuperado. Puedes continuar donde lo dejaste.');
  document.querySelector('#regOc')?.scrollIntoView({behavior:'smooth',block:'center'});
 }
+function draftConfirmDiscard(){
+ return new Promise(resolve=>{
+  let overlay=document.getElementById('draftConfirmOverlay');
+  if(!overlay){
+   overlay=document.createElement('div');overlay.id='draftConfirmOverlay';overlay.innerHTML='<section class="draft-confirm-card" role="dialog" aria-modal="true" aria-labelledby="draftConfirmTitle"><div class="draft-confirm-head"><span class="draft-confirm-symbol">?</span><strong id="draftConfirmTitle">Descartar proyecto</strong><button type="button" class="draft-confirm-x" data-draft-answer="no" aria-label="Cerrar">×</button></div><div class="draft-confirm-body">¿Deseas descartar este proyecto pendiente?<p>Se eliminará únicamente el borrador. <strong>Los movimientos oficiales permanecerán intactos.</strong></p></div><div class="draft-confirm-actions"><button type="button" class="draft-confirm-cancel" data-draft-answer="no">Cancelar</button><button type="button" class="draft-confirm-accept" data-draft-answer="yes">Descartar proyecto</button></div></section>';
+   document.body.appendChild(overlay);
+  }
+  const prior=document.activeElement;
+  const finish=value=>{overlay.classList.remove('visible');overlay.hidden=true;overlay.removeEventListener('click',onClick);document.removeEventListener('keydown',onKey);prior?.focus?.();resolve(value)};
+  const onClick=e=>{const b=e.target.closest('[data-draft-answer]');if(b)finish(b.dataset.draftAnswer==='yes');else if(e.target===overlay)finish(false)};
+  const onKey=e=>{if(e.key==='Escape'){e.preventDefault();finish(false)}};
+  overlay.hidden=false;overlay.classList.add('visible');overlay.addEventListener('click',onClick);document.addEventListener('keydown',onKey);
+  overlay.querySelector('.draft-confirm-cancel')?.focus();
+ });
+}
 async function draftDiscard(id){
- const ok=window.confirm('¿Descartar este proyecto? No se eliminará ningún movimiento oficial.');
+ const ok=await draftConfirmDiscard();
  if(!ok)return;
  const {error}=await db.from('proyectos_pago').delete().eq('id',id).eq('usuario_id',draftUserId);
  if(error){await styledMessage('No se pudo descartar: '+error.message);return}
