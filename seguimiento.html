@@ -636,7 +636,7 @@ $('#correctPresentation').onclick=async()=>{const fecha=$('#regPresentation').va
 let draftUserId=null,draftActiveId=null,draftBusy=false,draftTimer=null,draftGeneration=0,draftLastSignature='',draftReady=false;
 const draftFields=['regOc','regDate','regPresentation','regEnt','regState','regSender','regSubject','regObs'];
 function draftSnapshot(){const d={};for(const id of draftFields)d[id]=$('#'+id)?.value||'';return d}
-let draftToastTimer=null;
+let draftToastTimer=null;const draftToastShownForOc=new Set();
 function draftToast(message,kind='success'){
  let el=document.getElementById('draftToast');
  if(!el){el=document.createElement('div');el.id='draftToast';el.setAttribute('role','status');el.setAttribute('aria-live','polite');el.innerHTML='<span class="draft-toast-icon"></span><div class="draft-toast-copy"><strong></strong><span></span></div><button type="button" aria-label="Cerrar notificación">×</button>';document.body.appendChild(el);el.querySelector('button').onclick=()=>el.classList.remove('visible')}
@@ -669,7 +669,7 @@ async function draftPersist(manual=false){
   const payload={usuario_id:draftUserId,orden_compra_id:oc,datos,titulo,estado:'BORRADOR',actualizado_en:new Date().toISOString()};
   const {data,error}=await db.from('proyectos_pago').upsert(payload,{onConflict:'usuario_id,orden_compra_id'}).select('id').single();
   if(error)throw error;
-  if(generation===draftGeneration){draftActiveId=data.id;draftLastSignature=signature;didSave=true;draftSetStatus('✓ Proyecto guardado · '+new Date().toLocaleTimeString('es-PE'));if(manual)draftToast('Los datos de la OC quedaron guardados. Puedes continuar más tarde.');await draftListRefresh()}
+  if(generation===draftGeneration){draftActiveId=data.id;draftLastSignature=signature;didSave=true;draftSetStatus('');if(manual||!draftToastShownForOc.has(String(oc))){draftToast('Los datos de la OC quedaron guardados. Puedes continuar más tarde.');draftToastShownForOc.add(String(oc))}await draftListRefresh()}
  }catch(e){draftSetStatus('⚠ No se pudo guardar el proyecto: '+e.message);if(manual)await styledMessage('No se pudo guardar el proyecto: '+e.message)}
  finally{draftBusy=false;if(didSave&&generation===draftGeneration&&draftReady&&JSON.stringify([draftOc(),draftSnapshot()])!==draftLastSignature)draftSchedule()}
 }
@@ -687,7 +687,7 @@ async function draftOpen(id){
  for(const id of draftFields){if(id!=='regOc'&&id!=='regEnt'&&$('#'+id))$('#'+id).value=data[id]||''}
  if(data.regEnt&&[...$('#regEnt').options].some(v=>v.value===data.regEnt))$('#regEnt').value=data.regEnt;
  showRegContext(oc);draftLastSignature=JSON.stringify([x.orden_compra_id,draftSnapshot()]);draftReady=true;
- $('#draftList').hidden=true;draftSetStatus('✓ Proyecto recuperado. Puedes continuar donde lo dejaste.');
+ $('#draftList').hidden=true;draftSetStatus('');draftToast('Proyecto recuperado. Puedes continuar donde lo dejaste.');
  document.querySelector('#regOc')?.scrollIntoView({behavior:'smooth',block:'center'});
 }
 function draftConfirmDiscard(){
@@ -711,7 +711,7 @@ async function draftDiscard(id){
  const {error}=await db.from('proyectos_pago').delete().eq('id',id).eq('usuario_id',draftUserId);
  if(error){await styledMessage('No se pudo descartar: '+error.message);return}
  if(String(draftActiveId)===String(id)){draftGeneration++;draftActiveId=null;draftLastSignature=''}
- await draftListRefresh();draftSetStatus('Proyecto descartado.');
+ await draftListRefresh();draftSetStatus('');draftToast('El borrador se descartó correctamente. Los movimientos oficiales no se modificaron.');
 }
 async function draftFinish(oc){
  if(!draftUserId||!oc)return;
