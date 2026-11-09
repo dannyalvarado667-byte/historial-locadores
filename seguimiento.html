@@ -819,6 +819,10 @@ $('#regRecent').onclick=e=>{const b=e.target.closest('.recent-row[data-movement-
  picker.innerHTML=movementColumns.map(([k,label])=>'<label><input type="checkbox" data-mcol="'+k+'" checked> '+label+'</label>').join('');
  input.addEventListener('input',()=>{movementGlobalQuery=input.value.trim();render()});
  picker.addEventListener('change',e=>{const k=e.target.dataset.mcol;if(!k)return;if(e.target.checked)movementVisible.add(k);else if(movementVisible.size>1)movementVisible.delete(k);else e.target.checked=true;render()});
+ const colMenu=document.getElementById('movementColumnPicker'),exportMenu=document.getElementById('movementExportPicker');
+ document.addEventListener('pointerdown',e=>{for(const menu of [colMenu,exportMenu])if(menu.open&&!menu.contains(e.target))menu.open=false;});
+ [colMenu,exportMenu].forEach(menu=>menu.addEventListener('toggle',()=>{if(menu.open){for(const other of [colMenu,exportMenu])if(other!==menu)other.open=false;}}));
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'){colMenu.open=false;exportMenu.open=false;}});
  full.addEventListener('click',()=>{const active=section.classList.toggle('movement-fullscreen');full.textContent=active?'⤢ Reducir':'⛶ Ampliar';document.body.style.overflow=active?'hidden':'';});
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&section.classList.contains('movement-fullscreen'))full.click()});
  const cells=()=>{const cols=movementColumns.filter(([k])=>movementVisible.has(k));return [cols.map(c=>c[1]),...movementOrdered(movementFiltered).map(x=>cols.map(([k])=>k==='fecha_revision'?fmt(x.fecha_revision):k==='entregable_presentado'?(x.entregable_presentado===true?'Sí':x.entregable_presentado===false?'No':''):String(movementValue(x,k)??'')))];};
